@@ -33,7 +33,7 @@ fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: locatio
     swagger.attribute("paths")
             .attribute(location.path)
             .attribute(method.value.toLowerCase()).apply {
-        put("summary", "${method.value} ${location.path}")
+        put("summary", summary?:"${method.value} ${location.path}")
         getOrPut("parameters") {
             JSONArray().apply {
                 addAll(locationType.nameToJson().map { (name, json) ->

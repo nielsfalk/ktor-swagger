@@ -32,7 +32,7 @@ class pet(val id: Int)
 class pets
 
 fun main(args: Array<String>) {
-    val server = embeddedServer(Netty, getInteger("server.port",8080)) {
+    val server = embeddedServer(Netty, getInteger("server.port", 8080)) {
         install(DefaultHeaders)
         install(Compression)
         install(CallLogging)
@@ -41,39 +41,43 @@ fun main(args: Array<String>) {
         }
         install(Locations)
         routing {
-            get<pets>(responds(ok<PetsModel>())) {
+            get<pets>("all".responds(ok<PetsModel>())) {
                 call.respond(data)
             }
-            post<pets, PetModel>(responds(ok<PetModel>())) { _, entity ->
+            post<pets, PetModel>("create".responds(ok<PetModel>())) { _, entity ->
                 //http201 would be better but there is no way to do this see org.jetbrains.ktor.gson.GsonSupport.renderJsonContent
                 call.respond(entity.copy(id = newId()).apply {
                     data.pets.add(this)
                 })
             }
-            get<pet>(responses(ok<PetModel>(), notFound())) { params ->
-                val pet = data.pets.find { it.id == params.id }
-                call.respond(pet!!)
+            get<pet>("find".responds(ok<PetModel>(), notFound())) { params ->
+                data.pets.find { it.id == params.id }
+                        ?.let {
+                            call.respond(it)
+                        }
             }
-            delete<pet>(responses(ok<Unit>(), notFound())) { params ->
-                val pet = data.pets.find { it.id == params.id }
-                call.respond(Unit)
+            put<pet, PetModel>("update".responds(ok<PetModel>(), notFound())) { params, entity ->
+                if (data.pets.removeIf { it.id == params.id && it.id == entity.id }) {
+                    data.pets.add(entity)
+                    call.respond(entity)
+                }
             }
-            put<pet, PetModel>(responds(ok<PetModel>())) { params, entity ->
-                data.pets.removeIf { it.id == params.id }
-                data.pets.add(entity)
-                call.respond(entity)
+            delete<pet>("delete".responds(ok<Unit>(), notFound())) { params ->
+                if (data.pets.removeIf { it.id == params.id }) {
+                    call.respond(Unit)
+                }
             }
             swagger.attribute("info").apply {
                 put("description", "an example to generate swagger with ktor")
-                put("version" , "0.1")
+                put("version", "0.1")
                 put("title", "sample api implemented in ktor")
                 attribute("contact").apply {
-                    put("name","Niels Falk")
-                    put("url","https://github.com/nielsfalk/ktor-swagger")
+                    put("name", "Niels Falk")
+                    put("url", "https://github.com/nielsfalk/ktor-swagger")
                 }
             }
             swaggerUi("apidocs")
-            get("/"){
+            get("/") {
                 call.respondRedirect("apidocs")
             }
         }
