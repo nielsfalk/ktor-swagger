@@ -36,7 +36,7 @@ class SwaggerKtTest {
 
     @Test
     fun `post toy operation with path and body parameter`() {
-        val parameters = swagger.find("paths", "/toys/{id}", "put").get("parameters") as List<JSONObject>
+        val parameters = swagger.find("paths", "/toys/{id}", "put").get("parameters") as List<MutableMap<String, Any>>
         val paraderTypes = parameters.map { it.get("in") }
 
         paraderTypes.should.contain("body")
@@ -48,7 +48,7 @@ class SwaggerKtTest {
         val responses = swagger.find("paths", "/toys/{id}", "put", "responses")
 
         responses.keys.should.contain("404")
-        (responses.get("200") as JSONObject).find("schema").get("\$ref").should.equal("#/definitions/ToyModel")
+        (responses.get("200") as MutableMap<String, Any>).find("schema").get("\$ref").should.equal("#/definitions/ToyModel")
     }
 
     @Test
@@ -60,10 +60,10 @@ class SwaggerKtTest {
     }
 }
 
-private fun JSONObject.find(vararg segments: String): JSONObject {
+private fun MutableMap<String, Any>.find(vararg segments: String): MutableMap<String, Any> {
     var current = this
     for (segment in segments) {
-        current = current.get(segment) as JSONObject
+        current = current.get(segment) as MutableMap<String, Any>
     }
     return current
 }

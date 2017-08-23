@@ -3,18 +3,15 @@ package de.nielsfalk.playground.ktor.swagger
 import org.jetbrains.ktor.http.HttpMethod
 import org.jetbrains.ktor.http.HttpStatusCode
 import org.jetbrains.ktor.locations.location
-import org.json.simple.JSONArray
-import org.json.simple.JSONObject
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 
 /**
  * @author Niels Falk
  */
 
-val swagger = JSONObject().apply {
-    put("swagger", "2.0")
-}
+val swagger = mutableMapOf<String, Any>("swagger" to "2.0")
 
 inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
     val clazz = LOCATION::class.java
@@ -33,36 +30,31 @@ fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: locatio
     swagger.attribute("paths")
             .attribute(location.path)
             .attribute(method.value.toLowerCase()).apply {
-        put("summary", summary?:"${method.value} ${location.path}")
+        put("summary", summary ?: "${method.value} ${location.path}")
         getOrPut("parameters") {
-            JSONArray().apply {
-                addAll(locationType.nameToJson().map { (name, json) ->
-                    json.apply {
-                        put("description", name)
-                        put("in", "path")
-                        put("name", name)
-                        put("required", true)
+            mutableListOf<MutableMap<String, Any>>().apply {
+                addAll(locationType.toList().apply {
+                    forEach {
+                        it.put("description", it.get("name").toString())
+                        it.put("in", "path")
+                        it.put("required", true)
                     }
                 })
                 if (entityType != Unit::class) {
                     listOf(entityType).toModels()
-                    add(JSONObject().apply {
-                        put("description", entityType.simpleName)
-                        put("in", "body")
-                        put("name", "body")
-                        put("required", true)
-                        attribute("schema").apply {
-                            put("\$ref", "#/definitions/${entityType.simpleName}")
-                        }
-                    })
+                    add(mutableMapOf<String, Any>(
+                            "description" to entityType.simpleName!!,
+                            "in" to "body",
+                            "name" to "body",
+                            "required" to true,
+                            "schema" to mapOf("\$ref" to "#/definitions/${entityType.simpleName}")
+                    ))
                 }
             }
         }
-        attribute("responses").apply { putAll(responses.toSwagger()) }
+        attribute("responses").apply { putAll(responses.toMap()) }
     }
-
 }
-
 
 private fun Collection<KClass<*>>.toModels() =
         filter { it != Unit::class }
@@ -71,34 +63,29 @@ private fun Collection<KClass<*>>.toModels() =
                 }
                 .toMap()
 
-private fun KClass<*>.toModel(): Pair<String?, JSONObject> {
-    return simpleName to JSONObject().apply {
+private fun KClass<*>.toModel(): Pair<String, MutableMap<String, Any>> {
+    return simpleName!! to mutableMapOf<String, Any>().apply {
         attribute("properties").apply {
             putAll(toProperty())
         }
     }
 }
 
-private fun <T : Any> KClass<T>.toProperty(): Map<String, JSONObject> {
-    return nameToJson().toMap()
+private fun <T : Any> KClass<T>.toProperty(): Map<String, MutableMap<String, Any>> {
+    return toList().map { it.get("name").toString() to it }.toMap()
 }
 
-private fun <T : Any> KClass<T>.nameToJson(): List<Pair<String, JSONObject>> {
-    return this.memberProperties.map {
-        it.name to when (it.returnType.toString()) {
+private fun <T : Any> KClass<T>.toList(): MutableList<MutableMap<String, Any>> =
+        this.memberProperties.map {
+            attributeToMap(it)
+        }.toMutableList()
 
-            "kotlin.Int?" -> JSONObject().apply {
-                put("type", "integer")
-                put("format", "int32")
-            }
-            "kotlin.Int" -> JSONObject().apply {
-                put("type", "integer")
-                put("format", "int32")
-            }
-            "kotlin.String" -> JSONObject().apply {
-                put("type", "string")
-            }
-        //todo: niels 22.08.2017: list
+private fun <T : Any> attributeToMap(it: KProperty1<T, *>): MutableMap<String, Any> =
+        when (it.returnType.toString()) {
+
+            "kotlin.Int?" -> integer()
+            "kotlin.Int" -> integer()
+            "kotlin.String" -> mutableMapOf<String, Any>("type" to "string")
             else -> if (it.returnType.classifier.toString().equals("class kotlin.collections.List")) {
                 val clazz: KClass<*> = it.returnType.arguments.first().type?.classifier as KClass<*>
                 swagger.attribute("definitions").apply {
@@ -106,35 +93,30 @@ private fun <T : Any> KClass<T>.nameToJson(): List<Pair<String, JSONObject>> {
                     put(name, model)
                 }
 
-                JSONObject().apply {
-                    put("type" , "array")
-                    attribute("items").apply {
-                        put("\$ref","#/definitions/${clazz.simpleName}");
-                    }
-                }
+                mutableMapOf<String, Any>(
+                        "type" to "array",
+                        "items" to mapOf("\$ref" to "#/definitions/${clazz.simpleName}"))
             } else {
-                JSONObject()
+                mutableMapOf()
             }
-        }
-    }
-}
+        }.apply { put("name", it.name) }
+
+private fun integer(): MutableMap<String, Any> = mutableMapOf<String, Any>("type" to "integer", "format" to "int32")
 
 
-private fun Map<HttpStatusCode, KClass<*>>.toSwagger() =
+private fun Map<HttpStatusCode, KClass<*>>.toMap() =
         mapValues {
-            JSONObject().apply {
-                put("description", when (it.value) {
-                    Unit::class -> it.key.description
-                    else -> it.value.simpleName
-                })
+            mutableMapOf<String, Any>("description" to when (it.value) {
+                Unit::class -> it.key.description
+                else -> it.value.simpleName!!
+            }).apply {
                 if (it.value != Unit::class) {
-                    attribute("schema").apply {
-                        put("\$ref", "#/definitions/${it.value.simpleName}")
-                    }
+                    put("schema", mapOf("\$ref" to "#/definitions/${it.value.simpleName}"))
                 }
             }
         }.mapKeys {
             it.key.value.toString()
         }
 
-fun JSONObject.attribute(key: String) = getOrPut(key) { JSONObject() } as JSONObject
+fun MutableMap<String, Any>.attribute(key: String): MutableMap<String, Any> =
+        getOrPut(key) { mutableMapOf<String, Any>() } as MutableMap<String, Any>

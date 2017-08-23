@@ -45,6 +45,6 @@ class SwaggerUiTest {
             uri = "/apidocs/swagger.json"
             method = Get
             addHeader("Accept", ContentType.Application.Json.toString())
-        }.response.content.should.contain("{\"swagger\":\"2.0\"}")
+        }.response.content.should.contain("\"swagger\":\"2.0\"")
     }
 }
