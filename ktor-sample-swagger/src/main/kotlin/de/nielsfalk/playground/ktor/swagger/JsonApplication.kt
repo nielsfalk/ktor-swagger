@@ -40,6 +40,18 @@ fun main(args: Array<String>) {
             setPrettyPrinting()
         }
         install(Locations)
+        install(SwaggerUi) {
+            forwardRoot = true
+            swagger.attribute("info").apply {
+                put("description", "an example to generate swagger with ktor")
+                put("version", "0.1")
+                put("title", "sample api implemented in ktor")
+                attribute("contact").apply {
+                    put("name", "Niels Falk")
+                    put("url", "https://github.com/nielsfalk/ktor-swagger")
+                }
+            }
+        }
         routing {
             get<pets>("all".responds(ok<PetsModel>())) {
                 call.respond(data)
@@ -66,19 +78,6 @@ fun main(args: Array<String>) {
                 if (data.pets.removeIf { it.id == params.id }) {
                     call.respond(Unit)
                 }
-            }
-            swagger.attribute("info").apply {
-                put("description", "an example to generate swagger with ktor")
-                put("version", "0.1")
-                put("title", "sample api implemented in ktor")
-                attribute("contact").apply {
-                    put("name", "Niels Falk")
-                    put("url", "https://github.com/nielsfalk/ktor-swagger")
-                }
-            }
-            swaggerUi("apidocs")
-            get("/") {
-                call.respondRedirect("apidocs")
             }
         }
     }
