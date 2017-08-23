@@ -10,8 +10,6 @@ import org.jetbrains.ktor.locations.Locations
 import org.jetbrains.ktor.locations.location
 import org.jetbrains.ktor.netty.Netty
 import org.jetbrains.ktor.response.respond
-import org.jetbrains.ktor.response.respondRedirect
-import org.jetbrains.ktor.routing.get
 import org.jetbrains.ktor.routing.routing
 import java.lang.Integer.getInteger
 
@@ -42,16 +40,15 @@ fun main(args: Array<String>) {
         install(Locations)
         install(SwaggerUi) {
             forwardRoot = true
-            swagger.attribute("info").apply {
-                put("description", "an example to generate swagger with ktor")
-                put("version", "0.1")
-                put("title", "sample api implemented in ktor")
-                put("description", "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)")
-                attribute("contact").apply {
-                    put("name", "Niels Falk")
-                    put("url", "https://nielsfalk.de")
-                }
-            }
+            swagger.info = mapOf(
+                    "description" to "an example to generate swagger with ktor",
+                    "version" to "0.1",
+                    "title" to "sample api implemented in ktor",
+                    "description" to "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
+                    "contact" to mapOf(
+                            "name" to "Niels Falk",
+                            "url" to "https://nielsfalk.de")
+            )
         }
         routing {
             get<pets>("all".responds(ok<PetsModel>())) {

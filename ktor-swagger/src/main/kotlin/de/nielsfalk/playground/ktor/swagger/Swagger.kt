@@ -11,7 +11,15 @@ import kotlin.reflect.full.memberProperties
  * @author Niels Falk
  */
 
-val swagger = mutableMapOf<String, Any>("swagger" to "2.0")
+class Swagger {
+    val swagger = "2.0"
+    var info: Map<String, Any>? = null
+    val definitions = mutableMapOf<String, Any>()
+    val paths = mutableMapOf<String, Any>()
+}
+
+val swagger = Swagger()
+
 
 inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
     val clazz = LOCATION::class.java
@@ -21,13 +29,11 @@ inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(me
 }
 
 fun Metadata.applyDefinitions() {
-    swagger.attribute("definitions").apply {
-        putAll(responses.values.toModels())
-    }
+    swagger.definitions.putAll(responses.values.toModels())
 }
 
 fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: location, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
-    swagger.attribute("paths")
+    swagger.paths
             .attribute(location.path)
             .attribute(method.value.toLowerCase()).apply {
         put("summary", summary ?: "${method.value} ${location.path}")
@@ -88,10 +94,8 @@ private fun <T : Any> attributeToMap(it: KProperty1<T, *>): MutableMap<String, A
             "kotlin.String" -> mutableMapOf<String, Any>("type" to "string")
             else -> if (it.returnType.classifier.toString().equals("class kotlin.collections.List")) {
                 val clazz: KClass<*> = it.returnType.arguments.first().type?.classifier as KClass<*>
-                swagger.attribute("definitions").apply {
-                    val (name, model) = clazz.toModel()
-                    put(name, model)
-                }
+                val (name, model) = clazz.toModel()
+                swagger.definitions.put(name, model)
 
                 mutableMapOf<String, Any>(
                         "type" to "array",

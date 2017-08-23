@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package de.nielsfalk.playground.ktor.swagger
 
 import com.winterbe.expekt.should
@@ -6,7 +8,6 @@ import org.jetbrains.ktor.locations.Locations
 import org.jetbrains.ktor.locations.location
 import org.jetbrains.ktor.routing.routing
 import org.jetbrains.ktor.testing.withTestApplication
-import org.json.simple.JSONObject
 import org.junit.Before
 import org.junit.Test
 
@@ -29,14 +30,14 @@ class SwaggerKtTest {
         //when:
         application.install(Locations)
         application.routing {
-            put<toy, ToyModel>(responses(ok<ToyModel>(), notFound())) { _, _ -> }
-            get<toys>(responses(ok<ToysModel>(), notFound())) { _ -> }
+            put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
+            get<toys>("all".responds(ok<ToysModel>(), notFound())) { _ -> }
         }
     }
 
     @Test
     fun `post toy operation with path and body parameter`() {
-        val parameters = swagger.find("paths", "/toys/{id}", "put").get("parameters") as List<MutableMap<String, Any>>
+        val parameters = swagger.paths.find("/toys/{id}", "put").get("parameters") as List<MutableMap<String, Any>>
         val paraderTypes = parameters.map { it.get("in") }
 
         paraderTypes.should.contain("body")
@@ -45,7 +46,7 @@ class SwaggerKtTest {
 
     @Test
     fun `post toy operation with 200 and 404 response`() {
-        val responses = swagger.find("paths", "/toys/{id}", "put", "responses")
+        val responses = swagger.paths.find("/toys/{id}", "put", "responses")
 
         responses.keys.should.contain("404")
         (responses.get("200") as MutableMap<String, Any>).find("schema").get("\$ref").should.equal("#/definitions/ToyModel")
@@ -53,10 +54,10 @@ class SwaggerKtTest {
 
     @Test
     fun `ToysModel with array properties`() {
-        val properties = swagger.find("definitions", "ToysModel", "properties", "toys")
+        val properties = swagger.definitions.find("ToysModel", "properties", "toys")
 
-        properties.get("type").should.equal("array")
-        properties.find("items").get("\$ref").should.equal("#/definitions/ToyModel")
+        properties["type"].should.equal("array")
+        properties.find("items")["\$ref"].should.equal("#/definitions/ToyModel")
     }
 }
 
