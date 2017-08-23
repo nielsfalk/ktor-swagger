@@ -46,9 +46,10 @@ fun main(args: Array<String>) {
                 put("description", "an example to generate swagger with ktor")
                 put("version", "0.1")
                 put("title", "sample api implemented in ktor")
+                put("description", "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)")
                 attribute("contact").apply {
                     put("name", "Niels Falk")
-                    put("url", "https://github.com/nielsfalk/ktor-swagger")
+                    put("url", "https://nielsfalk.de")
                 }
             }
         }
