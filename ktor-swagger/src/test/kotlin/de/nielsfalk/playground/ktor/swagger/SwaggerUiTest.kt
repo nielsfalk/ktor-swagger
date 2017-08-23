@@ -5,7 +5,6 @@ import org.jetbrains.ktor.application.install
 import org.jetbrains.ktor.gson.GsonSupport
 import org.jetbrains.ktor.http.ContentType
 import org.jetbrains.ktor.http.HttpMethod.Companion.Get
-import org.jetbrains.ktor.request.accept
 import org.jetbrains.ktor.testing.handleRequest
 import org.jetbrains.ktor.testing.withTestApplication
 import org.junit.Test
@@ -20,9 +19,9 @@ class SwaggerUiTest {
         application.install(SwaggerUi) { forwardRoot = true }
 
         //then
-        handleRequest(Get, "/").response.headers.get("Location").should.equal("apidocs")
-        handleRequest(Get, "/apidocs").response.headers.get("Location").should.equal("apidocs/index.html?url=swagger.json")
-        handleRequest(Get, "/apidocs/").response.headers.get("Location").should.equal("apidocs/index.html?url=swagger.json")
+        handleRequest(Get, "/").response.headers["Location"].should.equal("apidocs")
+        handleRequest(Get, "/apidocs").response.headers["Location"].should.equal("apidocs/index.html?url=swagger.json")
+        handleRequest(Get, "/apidocs/").response.headers["Location"].should.equal("apidocs/index.html?url=swagger.json")
     }
 
     @Test

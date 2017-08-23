@@ -28,7 +28,7 @@ private val notFound = mutableListOf<String>()
 private val content = mutableMapOf<String, ResourceContent>()
 
 
-class SwaggerUi() {
+class SwaggerUi {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerUi> {
         override val key = AttributeKey<SwaggerUi>("gson")
 
@@ -90,5 +90,5 @@ private class ResourceContent(val resource: URL) : FinalContent.ByteArrayContent
     }
 
     override fun bytes(): ByteArray = bytes
-    override fun toString() = "ResourceContent \"${resource}\""
+    override fun toString() = "ResourceContent \"$resource\""
 }

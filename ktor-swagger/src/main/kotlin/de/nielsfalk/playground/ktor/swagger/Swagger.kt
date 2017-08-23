@@ -41,14 +41,14 @@ fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: locatio
             mutableListOf<MutableMap<String, Any>>().apply {
                 addAll(locationType.toList().apply {
                     forEach {
-                        it.put("description", it.get("name").toString())
+                        it.put("description", it["name"].toString())
                         it.put("in", "path")
                         it.put("required", true)
                     }
                 })
                 if (entityType != Unit::class) {
                     listOf(entityType).toModels()
-                    add(mutableMapOf<String, Any>(
+                    add(mutableMapOf(
                             "description" to entityType.simpleName!!,
                             "in" to "body",
                             "name" to "body",
@@ -78,7 +78,7 @@ private fun KClass<*>.toModel(): Pair<String, MutableMap<String, Any>> {
 }
 
 private fun <T : Any> KClass<T>.toProperty(): Map<String, MutableMap<String, Any>> {
-    return toList().map { it.get("name").toString() to it }.toMap()
+    return toList().map { it["name"].toString() to it }.toMap()
 }
 
 private fun <T : Any> KClass<T>.toList(): MutableList<MutableMap<String, Any>> =
@@ -92,12 +92,12 @@ private fun <T : Any> attributeToMap(it: KProperty1<T, *>): MutableMap<String, A
             "kotlin.Int?" -> integer()
             "kotlin.Int" -> integer()
             "kotlin.String" -> mutableMapOf<String, Any>("type" to "string")
-            else -> if (it.returnType.classifier.toString().equals("class kotlin.collections.List")) {
+            else -> if (it.returnType.classifier.toString() == "class kotlin.collections.List") {
                 val clazz: KClass<*> = it.returnType.arguments.first().type?.classifier as KClass<*>
                 val (name, model) = clazz.toModel()
                 swagger.definitions.put(name, model)
 
-                mutableMapOf<String, Any>(
+                mutableMapOf(
                         "type" to "array",
                         "items" to mapOf("\$ref" to "#/definitions/${clazz.simpleName}"))
             } else {
@@ -105,7 +105,7 @@ private fun <T : Any> attributeToMap(it: KProperty1<T, *>): MutableMap<String, A
             }
         }.apply { put("name", it.name) }
 
-private fun integer(): MutableMap<String, Any> = mutableMapOf<String, Any>("type" to "integer", "format" to "int32")
+private fun integer(): MutableMap<String, Any> = mutableMapOf("type" to "integer", "format" to "int32")
 
 
 private fun Map<HttpStatusCode, KClass<*>>.toMap() =
