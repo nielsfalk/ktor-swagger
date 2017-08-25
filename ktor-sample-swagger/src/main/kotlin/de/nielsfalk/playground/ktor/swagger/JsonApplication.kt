@@ -18,6 +18,7 @@ import java.lang.Integer.getInteger
  */
 
 data class PetModel(val id: Int?, val name: String)
+
 data class PetsModel(val pets: MutableList<PetModel>)
 
 val data = PetsModel(mutableListOf(PetModel(1, "max"), PetModel(2, "moritz")))
@@ -40,14 +41,13 @@ fun main(args: Array<String>) {
         install(Locations)
         install(SwaggerUi) {
             forwardRoot = true
-            swagger.info = mapOf(
-                    "description" to "an example to generate swagger with ktor",
-                    "version" to "0.1",
-                    "title" to "sample api implemented in ktor",
-                    "description" to "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
-                    "contact" to mapOf(
-                            "name" to "Niels Falk",
-                            "url" to "https://nielsfalk.de")
+            swagger.info = Information(
+                    version = "0.1",
+                    title = "sample api implemented in ktor",
+                    description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
+                    contact = Contact(
+                            name = "Niels Falk",
+                            url = "https://nielsfalk.de")
             )
         }
         routing {

@@ -24,7 +24,7 @@ class toy(val id: Int)
 @location("/toys")
 class toys
 
-class SwaggerKtTest {
+class SwaggerTest {
     @Before
     fun setUp(): Unit = withTestApplication {
         //when:
@@ -37,27 +37,27 @@ class SwaggerKtTest {
 
     @Test
     fun `post toy operation with path and body parameter`() {
-        val parameters = swagger.paths.find("/toys/{id}", "put")["parameters"] as List<MutableMap<String, Any>>
-        val paraderTypes = parameters.map { it["in"] }
+        val parameters = swagger.paths.get("/toys/{id}")?.get("put")?.parameters
+        val paraderTypes = parameters?.map { it.`in` }
 
-        paraderTypes.should.contain("body")
-        paraderTypes.should.contain("path")
+        paraderTypes.should.contain(ParameterInputType.body)
+        paraderTypes.should.contain(ParameterInputType.path)
     }
 
     @Test
     fun `post toy operation with 200 and 404 response`() {
-        val responses = swagger.paths.find("/toys/{id}", "put", "responses")
+        val responses = swagger.paths.get("/toys/{id}")?.get("put")?.responses
 
-        responses.keys.should.contain("404")
-        (responses["200"] as MutableMap<String, Any>).find("schema")["\$ref"].should.equal("#/definitions/ToyModel")
+        responses?.keys.should.contain("404")
+        responses?.get("200")?.schema?.`$ref`.should.equal("#/definitions/ToyModel")
     }
 
     @Test
     fun `ToysModel with array properties`() {
-        val properties = swagger.definitions.find("ToysModel", "properties", "toys")
+        val toys = swagger.definitions.get("ToysModel")?.properties?.get("toys") as ArrayModelModelProperty
 
-        properties["type"].should.equal("array")
-        properties.find("items")["\$ref"].should.equal("#/definitions/ToyModel")
+        toys?.type.should.equal("array")
+        toys?.items.`$ref`.should.equal("#/definitions/ToyModel")
     }
 }
 
