@@ -10,6 +10,8 @@ import org.jetbrains.ktor.routing.routing
 import org.jetbrains.ktor.testing.withTestApplication
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
+import java.time.LocalDate
 
 data class ToyModel(val id: Int?, val name: String)
 data class ToysModel(val toys: MutableList<ToyModel>)
@@ -54,27 +56,82 @@ class SwaggerTest {
 
     @Test
     fun `ToysModel with array properties`() {
-        val toys = swagger.definitions.get("ToysModel")?.properties?.get("toys") as ArrayModelModelProperty
+        val toys = swagger.definitions.get("ToysModel")?.properties?.get("toys") as ArrayModelProperty
 
         toys?.type.should.equal("array")
-        toys?.items.`$ref`.should.equal("#/definitions/ToyModel")
+        val items = toys?.items as ReferenceModelProperty
+        items.`$ref`.should.equal("#/definitions/ToyModel")
     }
 
     enum class EnumClass {
         first, second, third
     }
 
-    class Model(
-            val enumValue: EnumClass
-    )
-
     @Test
     fun `enum Property`() {
+        class Model(val enumValue: EnumClass?)
+
         val property = ModelData(Model::class)
                 .properties["enumValue"] as EnumModelProperty
 
         property.type.should.equal("string")
         property.enum.should.contain.elements("first", "second", "third")
+    }
+
+    @Test
+    fun `instant Property`() {
+        class Model(val timestamp: Instant?)
+
+        val property = ModelData(Model::class)
+                .properties["timestamp"] as StringModelProperty
+
+        property.type.should.equal("string")
+        property.format.should.equal("date-time")
+    }
+
+    @Test
+    fun `localDate Property`() {
+        class Model(val birthDate: LocalDate?)
+
+        val property = ModelData(Model::class)
+                .properties["birthDate"] as StringModelProperty
+
+        property.type.should.equal("string")
+        property.format.should.equal("date")
+    }
+
+    @Test
+    fun `long Property`() {
+        class Model(val long: Long?)
+
+        val property = ModelData(Model::class)
+                .properties["long"] as IntModelProperty
+
+        property.type.should.equal("integer")
+        property.format.should.equal("int64")
+    }
+
+    class PropertyModel {}
+
+    @Test
+    fun `reference model property`() {
+        class Model(val something: PropertyModel?)
+
+        val property = ModelData(Model::class)
+                .properties["something"] as ReferenceModelProperty
+
+        property.`$ref`.should.equal("#/definitions/PropertyModel")
+    }
+
+    @Test
+    fun `string array`() {
+        class Model(val something: List<String>)
+
+        val property = ModelData(Model::class)
+                .properties["something"] as ArrayModelProperty
+
+        property.type.should.equal("array")
+        property.items.type.should.equal("string")
     }
 }
 
