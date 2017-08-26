@@ -4,6 +4,7 @@ import org.jetbrains.ktor.application.Application
 import org.jetbrains.ktor.application.ApplicationFeature
 import org.jetbrains.ktor.application.featureOrNull
 import org.jetbrains.ktor.application.install
+import org.jetbrains.ktor.pipeline.PipelineContext
 import org.jetbrains.ktor.response.respond
 import org.jetbrains.ktor.response.respondRedirect
 import org.jetbrains.ktor.routing.Routing
@@ -24,7 +25,7 @@ class SwaggerSupport() {
             val feature = SwaggerSupport()
             application.routing {
                 get("/$path") {
-                    call.respondRedirect("$path/index.html?url=swagger.json")
+                    redirect(path)
                 }
                 val ui = if (provideUi) SwaggerUi() else null
                 get("/$path/{fileName}") {
@@ -37,11 +38,15 @@ class SwaggerSupport() {
                 }
                 if (forwardRoot) {
                     get("/") {
-                        call.respondRedirect("apidocs")
+                        redirect(path)
                     }
                 }
             }
             return feature
+        }
+
+        private suspend fun PipelineContext<Unit>.redirect(path: String) {
+            call.respondRedirect("/$path/index.html?url=swagger.json")
         }
     }
 }

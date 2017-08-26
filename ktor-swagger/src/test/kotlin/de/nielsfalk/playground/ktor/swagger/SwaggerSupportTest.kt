@@ -19,9 +19,9 @@ class SwaggerSupportTest {
         application.install(SwaggerSupport) { forwardRoot = true }
 
         //then
-        handleRequest(Get, "/").response.headers["Location"].should.equal("apidocs")
-        handleRequest(Get, "/apidocs").response.headers["Location"].should.equal("apidocs/index.html?url=swagger.json")
-        handleRequest(Get, "/apidocs/").response.headers["Location"].should.equal("apidocs/index.html?url=swagger.json")
+        handleRequest(Get, "/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        handleRequest(Get, "/apidocs").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        handleRequest(Get, "/apidocs/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
     }
 
     @Test
