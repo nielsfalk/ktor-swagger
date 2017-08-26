@@ -39,7 +39,7 @@ fun main(args: Array<String>) {
             setPrettyPrinting()
         }
         install(Locations)
-        install(SwaggerUi) {
+        install(SwaggerSupport) {
             forwardRoot = true
             swagger.info = Information(
                     version = "0.1",

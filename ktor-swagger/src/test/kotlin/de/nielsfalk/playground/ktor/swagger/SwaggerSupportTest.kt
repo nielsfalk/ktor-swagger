@@ -12,11 +12,11 @@ import org.junit.Test
 /**
  * @author Niels Falk
  */
-class SwaggerUiTest {
+class SwaggerSupportTest {
     @Test
     fun `installed apidocs`(): Unit = withTestApplication {
         //when
-        application.install(SwaggerUi) { forwardRoot = true }
+        application.install(SwaggerSupport) { forwardRoot = true }
 
         //then
         handleRequest(Get, "/").response.headers["Location"].should.equal("apidocs")
@@ -27,7 +27,7 @@ class SwaggerUiTest {
     @Test
     fun `provide webjar`(): Unit = withTestApplication {
         //when
-        application.install(SwaggerUi) { forwardRoot = true }
+        application.install(SwaggerSupport) { forwardRoot = true }
 
         //then
         handleRequest(Get, "/apidocs/index.html").response.content.should.contain("<title>Swagger UI</title>")
@@ -37,7 +37,7 @@ class SwaggerUiTest {
     fun `provide swaggerJson`(): Unit = withTestApplication {
         //when
         application.install(GsonSupport)
-        application.install(SwaggerUi) { forwardRoot = true }
+        application.install(SwaggerSupport) { forwardRoot = true }
 
         //then
         handleRequest {
