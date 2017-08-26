@@ -144,42 +144,34 @@ class ModelData(kClass: KClass<*>) {
                     .toMap()
 }
 
-val stringModelPropertyFormats = mapOf(
-        Instant::class to "date-time",
-        Date::class to "date-time",
-        LocalDateTime::class to "date-time",
-        LocalDate::class to "date"
+val propertyTypes = mapOf(
+        Int::class to ModelProperty("integer", "int32"),
+        Long::class to ModelProperty("integer", "int64"),
+        String::class to ModelProperty("string"),
+        Double::class to ModelProperty("number", "double"),
+        Instant::class to ModelProperty("string", "date-time"),
+        Date::class to ModelProperty("string", "date-time"),
+        LocalDateTime::class to ModelProperty("string", "date-time"),
+        LocalDate::class to ModelProperty("string", "date")
 ).mapKeys { it.key.qualifiedName }
 
 fun <T, R> KProperty1<T, R>.toModelProperty(): ModelProperty =
         (returnType.classifier as KClass<*>)
                 .toModelProperty(returnType)
 
-private fun KClass<*>.toModelProperty(returnType: KType? = null): ModelProperty {
-    val type = qualifiedName?.removeSuffix("?")
-    return when (type) {
-        "kotlin.Int" -> IntModelProperty()
-        "kotlin.Long" -> IntModelProperty(64)
-        "kotlin.String" -> StringModelProperty()
-        in stringModelPropertyFormats.keys -> StringModelProperty(stringModelPropertyFormats[type])
+private fun KClass<*>.toModelProperty(returnType: KType? = null): ModelProperty =
+        propertyTypes[qualifiedName?.removeSuffix("?")] ?:
+                if (returnType != null && toString() == "class kotlin.collections.List") {
+                    val clazz: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
+                    ArrayModelProperty(clazz.toModelProperty())
+                } else if (java.isEnum) {
+                    val enumConstants = (this).java.enumConstants
+                    EnumModelProperty(enumConstants.map { (it as Enum<*>).name })
+                } else {
+                    ReferenceModelProperty(this)
+                }
 
-        else -> if (returnType != null && toString() == "class kotlin.collections.List") {
-            val clazz: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
-            ArrayModelProperty(clazz.toModelProperty())
-        } else if (java.isEnum) {
-            val enumConstants = (this).java.enumConstants
-            EnumModelProperty(enumConstants.map { (it as Enum<*>).name })
-        } else {
-            ReferenceModelProperty(this)
-        }
-    }
-}
-
-abstract class ModelProperty(val type: String?, val format: String? = null)
-
-class IntModelProperty(length: Int = 32) : ModelProperty("integer", "int" + length)
-
-class StringModelProperty(format: String? = null) : ModelProperty("string", format)
+open class ModelProperty(val type: String?, val format: String? = null)
 
 class EnumModelProperty(val enum: List<String>) : ModelProperty("string")
 

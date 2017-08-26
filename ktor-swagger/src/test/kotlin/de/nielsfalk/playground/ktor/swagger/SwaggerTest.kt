@@ -83,7 +83,7 @@ class SwaggerTest {
         class Model(val timestamp: Instant?)
 
         val property = ModelData(Model::class)
-                .properties["timestamp"] as StringModelProperty
+                .properties["timestamp"] as ModelProperty
 
         property.type.should.equal("string")
         property.format.should.equal("date-time")
@@ -94,7 +94,7 @@ class SwaggerTest {
         class Model(val birthDate: LocalDate?)
 
         val property = ModelData(Model::class)
-                .properties["birthDate"] as StringModelProperty
+                .properties["birthDate"] as ModelProperty
 
         property.type.should.equal("string")
         property.format.should.equal("date")
@@ -105,10 +105,21 @@ class SwaggerTest {
         class Model(val long: Long?)
 
         val property = ModelData(Model::class)
-                .properties["long"] as IntModelProperty
+                .properties["long"] as ModelProperty
 
         property.type.should.equal("integer")
         property.format.should.equal("int64")
+    }
+
+    @Test
+    fun `double Property`() {
+        class Model(val double: Double?)
+
+        val property = ModelData(Model::class)
+                .properties["double"] as ModelProperty
+
+        property.type.should.equal("number")
+        property.format.should.equal("double")
     }
 
     class PropertyModel {}
