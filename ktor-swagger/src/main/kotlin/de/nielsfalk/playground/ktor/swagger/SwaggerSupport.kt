@@ -15,13 +15,13 @@ import org.jetbrains.ktor.util.AttributeKey
  */
 
 
-class SwaggerSupport(val swagger: Swagger) {
+class SwaggerSupport() {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
         override val key = AttributeKey<SwaggerSupport>("gson")
 
         override fun install(application: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
-            val (path, forwardRoot, provideUi, swagger) = SwaggerUiConfiguration().apply(configure)
-            val feature = SwaggerSupport(swagger)
+            val (path, forwardRoot, provideUi) = SwaggerUiConfiguration().apply(configure)
+            val feature = SwaggerSupport()
             application.routing {
                 get("/$path") {
                     call.respondRedirect("$path/index.html?url=swagger.json")
@@ -49,11 +49,8 @@ class SwaggerSupport(val swagger: Swagger) {
 data class SwaggerUiConfiguration(
         var path: String = "apidocs",
         var forwardRoot: Boolean = false,
-        var provideUi: Boolean = true,
-        val swagger: Swagger = Swagger()
+        var provideUi: Boolean = true
 )
-
-fun Application.swagger(): Swagger? = featureOrNull(SwaggerSupport)?.swagger
 
 fun Application.routing(configure: Routing.() -> Unit) =
         featureOrNull(Routing)?.apply(configure)
