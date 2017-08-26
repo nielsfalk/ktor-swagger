@@ -59,6 +59,23 @@ class SwaggerTest {
         toys?.type.should.equal("array")
         toys?.items.`$ref`.should.equal("#/definitions/ToyModel")
     }
+
+    enum class EnumClass {
+        first, second, third
+    }
+
+    class Model(
+            val enumValue: EnumClass
+    )
+
+    @Test
+    fun `enum Property`() {
+        val property = ModelData(Model::class)
+                .properties["enumValue"] as EnumModelProperty
+
+        property.type.should.equal("string")
+        property.enum.should.contain.elements("first", "second", "third")
+    }
 }
 
 private fun MutableMap<String, Any>.find(vararg segments: String): MutableMap<String, Any> {

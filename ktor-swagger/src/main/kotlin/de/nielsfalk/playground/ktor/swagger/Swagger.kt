@@ -149,8 +149,11 @@ fun <T, R> KProperty1<T, R>.toModelProperty(): ModelProperty =
                 val clazz: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
                 swagger.definitions.put(clazz.modelName(), ModelData(clazz))
                 ArrayModelModelProperty(clazz.modelName())
+            } else if ((returnType.classifier as KClass<*>).java.isEnum) {
+                val enumConstants = (returnType.classifier as KClass<*>).java.enumConstants
+                EnumModelProperty(enumConstants.map { (it as Enum<*>).name })
             } else {
-                TODO("please implement")
+                TODO("please implement " + returnType.toString())
             }
         }
 
@@ -161,6 +164,8 @@ class IntModelProperty : ModelProperty("integer") {
 }
 
 class StringModelProperty : ModelProperty("string")
+
+class EnumModelProperty(val enum: List<String>) : ModelProperty("string")
 
 class ArrayModelModelProperty(modelName: ModelName) : ModelProperty("array") {
     val items = ModelReference(modelName)
