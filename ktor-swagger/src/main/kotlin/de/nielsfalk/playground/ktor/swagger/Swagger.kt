@@ -22,7 +22,6 @@ import kotlin.reflect.full.memberProperties
 typealias ModelName = String
 typealias PropertyName = String
 typealias Path = String
-typealias Definition = Pair<ModelName, ModelData>
 typealias Definitions = MutableMap<ModelName, ModelData>
 typealias Paths = MutableMap<Path, Methods>
 typealias MethodName = String
@@ -60,18 +59,17 @@ class Operation(
     val summary = metadata.summary ?: "${method.value} ${location.path}"
     val parameters = mutableListOf<Parameter>().apply {
         if (entityType != Unit::class) {
-            val (modelName, modelData) = entityType.toDefinition()
-            swagger.definitions.put(modelName, modelData)
+            addDefinition(entityType)
             add(ModelParameter(entityType))
         }
         addAll(locationType.memberProperties.map { it.toParameter(location.path) })
     }
     val responses: Map<HttpStatus, Response> = metadata.responses.map {
-        val (status, clazz) = it
-        if (clazz != Unit::class) {
-            swagger.definitions.put(clazz.modelName(), ModelData(clazz))
+        val (status, kClass) = it
+        if (kClass != Unit::class) {
+            addDefinition(kClass)
         }
-        status.value.toString() to Response(status, clazz)
+        status.value.toString() to Response(status, kClass)
     }.toMap()
 }
 
@@ -94,9 +92,9 @@ fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: locatio
 }
 
 
-class Response(httpStatusCode: HttpStatusCode, clazz: KClass<*>) {
-    val description = if (clazz == Unit::class) httpStatusCode.description else clazz.responseDescription()
-    val schema = if (clazz == Unit::class) null else ModelReference(clazz.modelName())
+class Response(httpStatusCode: HttpStatusCode, kClass: KClass<*>) {
+    val description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription()
+    val schema = if (kClass == Unit::class) null else ModelReference(kClass.modelName())
 }
 
 fun KClass<*>.responseDescription(): String = modelName()
@@ -162,8 +160,8 @@ fun <T, R> KProperty1<T, R>.toModelProperty(): ModelProperty =
 private fun KClass<*>.toModelProperty(returnType: KType? = null): ModelProperty =
         propertyTypes[qualifiedName?.removeSuffix("?")] ?:
                 if (returnType != null && toString() == "class kotlin.collections.List") {
-                    val clazz: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
-                    ArrayModelProperty(clazz.toModelProperty())
+                    val kClass: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
+                    ArrayModelProperty(kClass.toModelProperty())
                 } else if (java.isEnum) {
                     val enumConstants = (this).java.enumConstants
                     EnumModelProperty(enumConstants.map { (it as Enum<*>).name })
@@ -177,12 +175,12 @@ class EnumModelProperty(val enum: List<String>) : ModelProperty("string")
 
 class ArrayModelProperty(val items: ModelProperty) : ModelProperty("array")
 
-class ReferenceModelProperty(clazz: KClass<*>) : ModelProperty(null) {
-    val description = clazz.modelName()
-    val `$ref` = "#/definitions/" + clazz.modelName()
+class ReferenceModelProperty(kClass: KClass<*>) : ModelProperty(null) {
+    val description = kClass.modelName()
+    val `$ref` = "#/definitions/" + kClass.modelName()
 
     init {
-        swagger.definitions.put(clazz.modelName(), ModelData(clazz))
+        addDefinition(kClass)
     }
 }
 
@@ -193,10 +191,17 @@ inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(me
     applyOperations(location, method, LOCATION::class, ENTITY_TYPE::class)
 }
 
-fun Metadata.applyResponseDefinitions() {
-    swagger.definitions.putAll(responses.values.filter { it != Unit::class }.map { it.toDefinition() })
-}
+fun Metadata.applyResponseDefinitions() =
+        responses.values.filter { it != Unit::class }
+                .forEach { addDefinition(it) }
 
-private fun KClass<*>.toDefinition(): Definition = modelName() to ModelData(this)
+
+private fun addDefinition(kClass: KClass<*>) {
+    if (kClass != Unit::class) {
+        swagger.definitions.computeIfAbsent(kClass.modelName()) {
+            ModelData(kClass)
+        }
+    }
+}
 
 private fun KClass<*>.modelName(): ModelName = simpleName ?: toString()
