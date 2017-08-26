@@ -56,10 +56,10 @@ class SwaggerTest {
 
     @Test
     fun `ToysModel with array properties`() {
-        val toys = swagger.definitions.get("ToysModel")?.properties?.get("toys") as ArrayModelProperty
+        val toys = swagger.definitions.get("ToysModel")?.properties?.get("toys") as Property
 
         toys?.type.should.equal("array")
-        val items = toys?.items as ReferenceModelProperty
+        val items = toys?.items as Property
         items.`$ref`.should.equal("#/definitions/ToyModel")
     }
 
@@ -72,7 +72,7 @@ class SwaggerTest {
         class Model(val enumValue: EnumClass?)
 
         val property = ModelData(Model::class)
-                .properties["enumValue"] as EnumModelProperty
+                .properties["enumValue"] as Property
 
         property.type.should.equal("string")
         property.enum.should.contain.elements("first", "second", "third")
@@ -83,7 +83,7 @@ class SwaggerTest {
         class Model(val timestamp: Instant?)
 
         val property = ModelData(Model::class)
-                .properties["timestamp"] as ModelProperty
+                .properties["timestamp"] as Property
 
         property.type.should.equal("string")
         property.format.should.equal("date-time")
@@ -94,7 +94,7 @@ class SwaggerTest {
         class Model(val birthDate: LocalDate?)
 
         val property = ModelData(Model::class)
-                .properties["birthDate"] as ModelProperty
+                .properties["birthDate"] as Property
 
         property.type.should.equal("string")
         property.format.should.equal("date")
@@ -105,7 +105,7 @@ class SwaggerTest {
         class Model(val long: Long?)
 
         val property = ModelData(Model::class)
-                .properties["long"] as ModelProperty
+                .properties["long"] as Property
 
         property.type.should.equal("integer")
         property.format.should.equal("int64")
@@ -116,7 +116,7 @@ class SwaggerTest {
         class Model(val double: Double?)
 
         val property = ModelData(Model::class)
-                .properties["double"] as ModelProperty
+                .properties["double"] as Property
 
         property.type.should.equal("number")
         property.format.should.equal("double")
@@ -129,7 +129,7 @@ class SwaggerTest {
         class Model(val something: PropertyModel?)
 
         val property = ModelData(Model::class)
-                .properties["something"] as ReferenceModelProperty
+                .properties["something"] as Property
 
         property.`$ref`.should.equal("#/definitions/PropertyModel")
     }
@@ -139,10 +139,10 @@ class SwaggerTest {
         class Model(val something: List<String>)
 
         val property = ModelData(Model::class)
-                .properties["something"] as ArrayModelProperty
+                .properties["something"] as Property
 
         property.type.should.equal("array")
-        property.items.type.should.equal("string")
+        property.items?.type.should.equal("string")
     }
 }
 

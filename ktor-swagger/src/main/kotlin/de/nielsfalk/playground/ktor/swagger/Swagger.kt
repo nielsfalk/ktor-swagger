@@ -76,6 +76,7 @@ class Operation(
 private fun <T, R> KProperty1<T, R>.toParameter(path: String): Parameter {
     val inputType = if (path.contains("{$name}")) ParameterInputType.path else query
     val description = name
+    toModelProperty()
     return when (returnType.toString()) {
         "kotlin.Int?" -> IntParameter(name, description, inputType)
         "kotlin.Int" -> IntParameter(name, description, inputType)
@@ -136,53 +137,48 @@ enum class ParameterInputType {
 }
 
 class ModelData(kClass: KClass<*>) {
-    val properties: Map<PropertyName, ModelProperty> =
+    val properties: Map<PropertyName, Property> =
             kClass.memberProperties
                     .map { it.name to it.toModelProperty() }
                     .toMap()
 }
 
 val propertyTypes = mapOf(
-        Int::class to ModelProperty("integer", "int32"),
-        Long::class to ModelProperty("integer", "int64"),
-        String::class to ModelProperty("string"),
-        Double::class to ModelProperty("number", "double"),
-        Instant::class to ModelProperty("string", "date-time"),
-        Date::class to ModelProperty("string", "date-time"),
-        LocalDateTime::class to ModelProperty("string", "date-time"),
-        LocalDate::class to ModelProperty("string", "date")
+        Int::class to Property("integer", "int32"),
+        Long::class to Property("integer", "int64"),
+        String::class to Property("string"),
+        Double::class to Property("number", "double"),
+        Instant::class to Property("string", "date-time"),
+        Date::class to Property("string", "date-time"),
+        LocalDateTime::class to Property("string", "date-time"),
+        LocalDate::class to Property("string", "date")
 ).mapKeys { it.key.qualifiedName }
 
-fun <T, R> KProperty1<T, R>.toModelProperty(): ModelProperty =
+fun <T, R> KProperty1<T, R>.toModelProperty(): Property =
         (returnType.classifier as KClass<*>)
                 .toModelProperty(returnType)
 
-private fun KClass<*>.toModelProperty(returnType: KType? = null): ModelProperty =
+private fun KClass<*>.toModelProperty(returnType: KType? = null): Property =
         propertyTypes[qualifiedName?.removeSuffix("?")] ?:
                 if (returnType != null && toString() == "class kotlin.collections.List") {
                     val kClass: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
-                    ArrayModelProperty(kClass.toModelProperty())
+                    Property(items = kClass.toModelProperty(), type = "array")
                 } else if (java.isEnum) {
                     val enumConstants = (this).java.enumConstants
-                    EnumModelProperty(enumConstants.map { (it as Enum<*>).name })
+                    Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string")
                 } else {
-                    ReferenceModelProperty(this)
+                    addDefinition(this)
+                    Property(`$ref` = "#/definitions/" + modelName(),
+                            description = modelName(),
+                            type = null)
                 }
 
-open class ModelProperty(val type: String?, val format: String? = null)
-
-class EnumModelProperty(val enum: List<String>) : ModelProperty("string")
-
-class ArrayModelProperty(val items: ModelProperty) : ModelProperty("array")
-
-class ReferenceModelProperty(kClass: KClass<*>) : ModelProperty(null) {
-    val description = kClass.modelName()
-    val `$ref` = "#/definitions/" + kClass.modelName()
-
-    init {
-        addDefinition(kClass)
-    }
-}
+open class Property(val type: String?,
+                    val format: String? = null,
+                    val enum: List<String>? = null,
+                    val items: Property? = null,
+                    val description: String? = null,
+                    val `$ref`: String? = null)
 
 inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
     val clazz = LOCATION::class.java
