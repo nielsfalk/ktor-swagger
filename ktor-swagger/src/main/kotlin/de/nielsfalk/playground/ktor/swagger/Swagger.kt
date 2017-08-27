@@ -60,30 +60,29 @@ class Operation(
     val parameters = mutableListOf<Parameter>().apply {
         if (entityType != Unit::class) {
             addDefinition(entityType)
-            add(ModelParameter(entityType))
+            add(entityType.bodyParameter())
         }
         addAll(locationType.memberProperties.map { it.toParameter(location.path) })
     }
+
     val responses: Map<HttpStatus, Response> = metadata.responses.map {
         val (status, kClass) = it
-        if (kClass != Unit::class) {
-            addDefinition(kClass)
-        }
+        addDefinition(kClass)
         status.value.toString() to Response(status, kClass)
     }.toMap()
 }
 
 private fun <T, R> KProperty1<T, R>.toParameter(path: String): Parameter {
     val inputType = if (path.contains("{$name}")) ParameterInputType.path else query
-    val description = name
-    toModelProperty()
-    return when (returnType.toString()) {
-        "kotlin.Int?" -> IntParameter(name, description, inputType)
-        "kotlin.Int" -> IntParameter(name, description, inputType)
-        "kotlin.String" -> StringParameter(name, description, inputType)
-        else -> TODO()
-    }
+    return Parameter(toModelProperty(), name, inputType)
 }
+
+private fun KClass<*>.bodyParameter() =
+        Parameter(referenceProperty(),
+                name = "body",
+                description = modelName(),
+                `in` = body
+        )
 
 fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: location, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
     swagger.paths
@@ -92,45 +91,27 @@ fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: locatio
                     Operation(this, location, method, locationType, entityType))
 }
 
-
 class Response(httpStatusCode: HttpStatusCode, kClass: KClass<*>) {
     val description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription()
-    val schema = if (kClass == Unit::class) null else ModelReference(kClass.modelName())
+    val schema = if (kClass == Unit::class) null else ModelReference("#/definitions/" + kClass.modelName())
 }
 
 fun KClass<*>.responseDescription(): String = modelName()
 
-class ModelReference(modelName: ModelName) {
-    val `$ref` = "#/definitions/" + modelName
-}
+class ModelReference(val `$ref`: String)
 
-abstract class Parameter(
-        val type: String?,
+class Parameter(
+        property: de.nielsfalk.playground.ktor.swagger.Property,
         val name: String,
-        val description: String = name,
         val `in`: ParameterInputType,
-        val required: Boolean
+        val description: String = property.description ?: name,
+        val required: Boolean = true,
+        val type: String? = property.type,
+        val format: String? = property.format,
+        val enum: List<String>? = property.enum,
+        val items: Property? = property.items,
+        val schema: ModelReference? = property.`$ref`?.let { ModelReference(it) }
 )
-
-class IntParameter(name: String,
-                   description: String = name,
-                   parameterInputType: ParameterInputType,
-                   required: Boolean = true
-) : Parameter("integer", name, description, parameterInputType, required) {
-    val format = "int32"
-}
-
-class StringParameter(name: String,
-                      description: String = name,
-                      parameterInputType: ParameterInputType,
-                      required: Boolean = true
-) : Parameter("string", name, description, parameterInputType, required)
-
-class ModelParameter(entityType: KClass<*>,
-                     required: Boolean = true
-) : Parameter(null, "body", entityType.modelName(), body, required) {
-    val schema = ModelReference(entityType.modelName())
-}
 
 enum class ParameterInputType {
     query, path, body
@@ -168,10 +149,13 @@ private fun KClass<*>.toModelProperty(returnType: KType? = null): Property =
                     Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string")
                 } else {
                     addDefinition(this)
-                    Property(`$ref` = "#/definitions/" + modelName(),
-                            description = modelName(),
-                            type = null)
+                    referenceProperty()
                 }
+
+private fun KClass<*>.referenceProperty(): Property =
+        Property(`$ref` = "#/definitions/" + modelName(),
+                description = modelName(),
+                type = null)
 
 open class Property(val type: String?,
                     val format: String? = null,
@@ -188,8 +172,7 @@ inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(me
 }
 
 fun Metadata.applyResponseDefinitions() =
-        responses.values.filter { it != Unit::class }
-                .forEach { addDefinition(it) }
+        responses.values.forEach { addDefinition(it) }
 
 
 private fun addDefinition(kClass: KClass<*>) {
