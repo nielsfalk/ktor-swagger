@@ -43,6 +43,10 @@ class Information(
         val contact: Contact? = null
 )
 
+data class Tag(
+        val name: String
+)
+
 class Contact(
         val name: String? = null,
         val url: String? = null,
@@ -52,9 +56,11 @@ class Contact(
 class Operation(
         metadata: Metadata,
         location: location,
+        group: group?,
         method: HttpMethod,
         locationType: KClass<*>,
         entityType: KClass<*>) {
+    val tags = group?.toList()
     val summary = metadata.summary ?: "${method.value} ${location.path}"
     val parameters = mutableListOf<Parameter>().apply {
         if (entityType != Unit::class) {
@@ -77,6 +83,10 @@ class Operation(
     }.toMap()
 }
 
+private fun group.toList(): List<Tag> {
+    return listOf(Tag(name))
+}
+
 fun <T, R> KProperty1<T, R>.toParameter(path: String, inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query): Parameter {
     return Parameter(toModelProperty(), name, inputType, required = !returnType.isMarkedNullable)
 }
@@ -88,11 +98,11 @@ private fun KClass<*>.bodyParameter() =
                 `in` = body
         )
 
-fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: location, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
+fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: location, group: group?, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
     swagger.paths
             .getOrPut(location.path) { mutableMapOf() }
             .put(method.value.toLowerCase(),
-                    Operation(this, location, method, locationType, entityType))
+                    Operation(this, location, group, method, locationType, entityType))
 }
 
 class Response(httpStatusCode: HttpStatusCode, kClass: KClass<*>) {
@@ -171,8 +181,9 @@ open class Property(val type: String?,
 inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
     val clazz = LOCATION::class.java
     val location = clazz.getAnnotation(location::class.java)
+    val tags = clazz.getAnnotation(group::class.java)
     applyResponseDefinitions()
-    applyOperations(location, method, LOCATION::class, ENTITY_TYPE::class)
+    applyOperations(location, tags, method, LOCATION::class, ENTITY_TYPE::class)
 }
 
 fun Metadata.applyResponseDefinitions() =
@@ -188,3 +199,5 @@ private fun addDefinition(kClass: KClass<*>) {
 }
 
 private fun KClass<*>.modelName(): ModelName = simpleName ?: toString()
+
+annotation class group(val name: String)

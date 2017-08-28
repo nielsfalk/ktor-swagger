@@ -21,6 +21,7 @@ data class ToysModel(val toys: MutableList<ToyModel>)
  * @author Niels Falk
  */
 
+@group("toy")
 @location("/toys/{id}")
 class toy(val id: Int)
 
@@ -60,6 +61,13 @@ class SwaggerTest {
 
         responses?.keys.should.contain("404")
         responses?.get("200")?.schema?.`$ref`.should.equal("#/definitions/ToyModel")
+    }
+
+    @Test
+    fun `post toy operation with tag`() {
+        val tags = swagger.paths.get("/toys/{id}")?.get("put")?.tags
+
+        tags?.map { it.name }.should.equal(listOf("toy"))
     }
 
     @Test

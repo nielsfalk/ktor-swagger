@@ -9,8 +9,11 @@ import org.jetbrains.ktor.host.embeddedServer
 import org.jetbrains.ktor.locations.Locations
 import org.jetbrains.ktor.locations.location
 import org.jetbrains.ktor.netty.Netty
+import org.jetbrains.ktor.pipeline.PipelineContext
 import org.jetbrains.ktor.response.respond
 import org.jetbrains.ktor.routing.routing
+import org.jetbrains.ktor.util.ValuesMap
+import org.jetbrains.ktor.util.toMap
 import java.lang.Integer.getInteger
 
 /**
@@ -24,11 +27,29 @@ data class PetsModel(val pets: MutableList<PetModel>)
 val data = PetsModel(mutableListOf(PetModel(1, "max"), PetModel(2, "moritz")))
 fun newId() = ((data.pets.map { it.id ?: 0 }.max()) ?: 0) + 1
 
+@group("pet operations")
 @location("/pets/{id}")
 class pet(val id: Int)
 
+@group("pet operations")
 @location("/pets")
 class pets
+
+@group("debug")
+@location("/request/info")
+class requestInfo
+
+@group("debug")
+@location("/request/withHeader")
+class withHeader
+
+class Header(val optionalHeader: String?, val mandatoryHeader: Int)
+
+@group("debug")
+@location("/request/withQueryParameter")
+class withQueryParameter
+
+class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
 fun main(args: Array<String>) {
     val server = embeddedServer(Netty, getInteger("server.port", 8080)) {
@@ -77,7 +98,35 @@ fun main(args: Array<String>) {
                     call.respond(Unit)
                 }
             }
+            get<requestInfo>(responds(ok<Unit>()),
+                    respondRequestDetails())
+            get<withQueryParameter>(responds(ok<Unit>())
+                    .parameter<QueryParameter>(),
+                    respondRequestDetails())
+            get<withHeader>(responds(ok<Unit>())
+                    .header<Header>(),
+                    respondRequestDetails())
         }
     }
     server.start(wait = true)
 }
+
+fun respondRequestDetails(): suspend PipelineContext<Unit>.(Any) -> Unit {
+    return {
+        call.respond(mapOf(
+                "parameter" to call.parameters,
+                "header" to call.request.headers
+        ).format())
+    }
+}
+
+private fun Map<String, ValuesMap>.format() =
+        mapValues {
+            it.value.toMap()
+                    .flatMap { (key, value) -> value.map { key to it } }
+                    .map { (key, value) -> "$key: $value" }
+                    .joinToString(separator = ",\n")
+        }
+                .map { (key, value) -> "$key:\n$value" }
+                .joinToString(separator = "\n\n")
+
