@@ -18,7 +18,19 @@ import kotlin.reflect.KClass
  * @author Niels Falk
  */
 
-data class Metadata(val responses: Map<HttpStatusCode, KClass<*>>, val summary:String?=null)
+data class Metadata(val responses: Map<HttpStatusCode, KClass<*>>, val summary: String? = null) {
+    var headers: KClass<*>? = null
+    var parameter: KClass<*>? = null
+    inline fun <reified T> header(): Metadata {
+        this.headers = T::class
+        return this
+    }
+
+    inline fun <reified T> parameter(): Metadata {
+        this.parameter = T::class
+        return this
+    }
+}
 
 fun String.responds(vararg pairs: Pair<HttpStatusCode, KClass<*>>): Metadata = Metadata(responses = mapOf(*pairs), summary = this)
 

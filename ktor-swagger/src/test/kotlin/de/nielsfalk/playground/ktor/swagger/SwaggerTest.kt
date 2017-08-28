@@ -27,6 +27,12 @@ class toy(val id: Int)
 @location("/toys")
 class toys
 
+@location("/withParameter")
+class withParameter
+
+class Header(val optionalHeader: String?, val mandatoryHeader: Int)
+class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
+
 class SwaggerTest {
     @Before
     fun setUp(): Unit = withTestApplication {
@@ -34,7 +40,8 @@ class SwaggerTest {
         application.install(Locations)
         application.routing {
             put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
-            get<toys>("all".responds(ok<ToysModel>(), notFound())) { _ -> }
+            get<toys>("all".responds(ok<ToysModel>(), notFound())) { }
+            get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
         }
     }
 
@@ -62,6 +69,32 @@ class SwaggerTest {
         toys?.type.should.equal("array")
         val items = toys?.items as Property
         items.`$ref`.should.equal("#/definitions/ToyModel")
+    }
+
+    @Test
+    fun `query parameter`() {
+        val parameters = swagger.paths.get("/withParameter")?.get("get")?.parameters
+
+        val optional = parameters?.find { it.name == "optionalParameter" }
+        optional?.required.should.equal(false)
+        optional?.`in`.should.equal(ParameterInputType.query)
+
+        val mandatory = parameters?.find { it.name == "mandatoryParameter" }
+        mandatory?.required.should.equal(true)
+        mandatory?.`in`.should.equal(ParameterInputType.query)
+    }
+
+    @Test
+    fun `headers`() {
+        val parameters = swagger.paths.get("/withParameter")?.get("get")?.parameters
+
+        val optional = parameters?.find { it.name == "optionalHeader" }
+        optional?.required.should.equal(false)
+        optional?.`in`.should.equal(ParameterInputType.header)
+
+        val mandatory = parameters?.find { it.name == "mandatoryHeader" }
+        mandatory?.required.should.equal(true)
+        mandatory?.`in`.should.equal(ParameterInputType.header)
     }
 
     enum class EnumClass {

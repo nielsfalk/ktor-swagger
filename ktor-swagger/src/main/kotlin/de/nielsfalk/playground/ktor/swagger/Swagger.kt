@@ -2,8 +2,7 @@
 
 package de.nielsfalk.playground.ktor.swagger
 
-import de.nielsfalk.playground.ktor.swagger.ParameterInputType.body
-import de.nielsfalk.playground.ktor.swagger.ParameterInputType.query
+import de.nielsfalk.playground.ktor.swagger.ParameterInputType.*
 import org.jetbrains.ktor.http.HttpMethod
 import org.jetbrains.ktor.http.HttpStatusCode
 import org.jetbrains.ktor.locations.location
@@ -63,6 +62,12 @@ class Operation(
             add(entityType.bodyParameter())
         }
         addAll(locationType.memberProperties.map { it.toParameter(location.path) })
+        metadata.parameter?.let {
+            addAll(it.memberProperties.map { it.toParameter(location.path, query) })
+        }
+        metadata.headers?.let {
+            addAll(it.memberProperties.map { it.toParameter(location.path, header) })
+        }
     }
 
     val responses: Map<HttpStatus, Response> = metadata.responses.map {
@@ -72,8 +77,7 @@ class Operation(
     }.toMap()
 }
 
-fun <T, R> KProperty1<T, R>.toParameter(path: String): Parameter {
-    val inputType = if (path.contains("{$name}")) ParameterInputType.path else query
+fun <T, R> KProperty1<T, R>.toParameter(path: String, inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query): Parameter {
     return Parameter(toModelProperty(), name, inputType, required = !returnType.isMarkedNullable)
 }
 
@@ -114,7 +118,7 @@ class Parameter(
 )
 
 enum class ParameterInputType {
-    query, path, body
+    query, path, body, header
 }
 
 class ModelData(kClass: KClass<*>) {
