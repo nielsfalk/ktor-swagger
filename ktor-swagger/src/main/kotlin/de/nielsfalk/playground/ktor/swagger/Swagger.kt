@@ -72,9 +72,9 @@ class Operation(
     }.toMap()
 }
 
-private fun <T, R> KProperty1<T, R>.toParameter(path: String): Parameter {
+fun <T, R> KProperty1<T, R>.toParameter(path: String): Parameter {
     val inputType = if (path.contains("{$name}")) ParameterInputType.path else query
-    return Parameter(toModelProperty(), name, inputType)
+    return Parameter(toModelProperty(), name, inputType, required = !returnType.isMarkedNullable)
 }
 
 private fun KClass<*>.bodyParameter() =

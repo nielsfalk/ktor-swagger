@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.reflect.full.memberProperties
 
 data class ToyModel(val id: Int?, val name: String)
 data class ToysModel(val toys: MutableList<ToyModel>)
@@ -143,6 +144,16 @@ class SwaggerTest {
 
         property.type.should.equal("array")
         property.items?.type.should.equal("string")
+    }
+
+    class Parameters(val optional: String?, val mandatory: String)
+
+    @Test
+    fun `optional parameters`() {
+        val map = Parameters::class.memberProperties.map { it.toParameter("") }
+
+        map.find { it.name == "optional" }!!.required.should.equals(false)
+        map.find { it.name == "mandatory" }!!.required.should.equals(true)
     }
 }
 
