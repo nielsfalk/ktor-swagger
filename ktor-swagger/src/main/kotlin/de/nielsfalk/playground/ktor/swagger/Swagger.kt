@@ -12,6 +12,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Date
+import java.util.concurrent.ConcurrentSkipListMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
@@ -32,7 +33,7 @@ class Swagger {
     val swagger = "2.0"
     var info: Information? = null
     val paths: Paths = mutableMapOf()
-    val definitions: Definitions = mutableMapOf()
+    val definitions: Definitions = ConcurrentSkipListMap()
 }
 
 class Information(
@@ -55,7 +56,7 @@ class Contact(
 class Operation(
         metadata: Metadata,
         location: Location,
-        group: group?,
+        group: Group?,
         method: HttpMethod,
         locationType: KClass<*>,
         entityType: KClass<*>) {
@@ -82,7 +83,7 @@ class Operation(
     }.toMap()
 }
 
-private fun group.toList(): List<Tag> {
+private fun Group.toList(): List<Tag> {
     return listOf(Tag(name))
 }
 
@@ -97,7 +98,7 @@ private fun KClass<*>.bodyParameter() =
                 `in` = body
         )
 
-fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: Location, group: group?, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
+fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: Location, group: Group?, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
     swagger.paths
             .getOrPut(location.path) { mutableMapOf() }
             .put(method.value.toLowerCase(),
@@ -180,7 +181,7 @@ open class Property(val type: String?,
 inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
     val clazz = LOCATION::class.java
     val location = clazz.getAnnotation(Location::class.java)
-    val tags = clazz.getAnnotation(group::class.java)
+    val tags = clazz.getAnnotation(Group::class.java)
     applyResponseDefinitions()
     applyOperations(location, tags, method, LOCATION::class, ENTITY_TYPE::class)
 }
@@ -199,4 +200,4 @@ private fun addDefinition(kClass: KClass<*>) {
 
 private fun KClass<*>.modelName(): ModelName = simpleName ?: toString()
 
-annotation class group(val name: String)
+annotation class Group(val name: String)

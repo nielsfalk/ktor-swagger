@@ -20,7 +20,7 @@ data class ToysModel(val toys: MutableList<ToyModel>)
  * @author Niels Falk
  */
 
-@group("toy")
+@Group("toy")
 @Location("/toys/{id}")
 class toy(val id: Int)
 

@@ -27,9 +27,6 @@ def configureGradleBuild(ProjectDescriptor project) {
                 "Project `${project.name}` must have a either a file " +
                         "containing ${gradleBuild.name} or ${kotlinBuild.name}"
     }
-    if (project != rootProject) {
-        project.name = rootProject.name + "-" + project.name
-    }
 
     // Any nested children projects also get configured.
     project.children.each { configureGradleBuild(it) }

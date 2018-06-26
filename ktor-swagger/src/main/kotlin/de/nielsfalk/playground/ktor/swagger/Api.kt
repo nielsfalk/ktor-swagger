@@ -38,32 +38,32 @@ fun responses(vararg pairs: Pair<HttpStatusCode, KClass<*>>) = Metadata(response
 inline fun <reified T> ok(): Pair<HttpStatusCode, KClass<*>> = OK to T::class
 inline fun notFound(): Pair<HttpStatusCode, KClass<*>> = NotFound to Unit::class
 
-inline fun <reified T : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(T, ENTITY) -> Unit): Route {
-    metadata.apply<T, ENTITY>(HttpMethod.Post)
-    return post<T> {
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
+    metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
+    return post<LOCATION> {
         body(this, it, call.receive())
     }
 }
 
-inline fun <reified T : Any, reified ENTITY : Any> Route.put(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(T, ENTITY) -> Unit): Route {
-    metadata.apply<T, ENTITY>(HttpMethod.Put)
-    return put<T> {
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
+    metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
+    return put<LOCATION> {
         body(this, it, call.receive())
     }
 }
 
-inline fun <reified T : Any> Route.get(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(T) -> Unit): Route {
-    metadata.apply<T, Unit>(HttpMethod.Get)
-    return location(T::class) {
+inline fun <reified LOCATION : Any> Route.get(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
+    metadata.apply<LOCATION, Unit>(HttpMethod.Get)
+    return location(LOCATION::class) {
         method(HttpMethod.Get) {
             handle(body)
         }
     }
 }
 
-inline fun <reified T : Any> Route.delete(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(T) -> Unit): Route {
-    metadata.apply<T, Unit>(HttpMethod.Delete)
-    return location(T::class) {
+inline fun <reified LOCATION : Any> Route.delete(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
+    metadata.apply<LOCATION, Unit>(HttpMethod.Delete)
+    return location(LOCATION::class) {
         method(HttpMethod.Delete) {
             handle(body)
         }
