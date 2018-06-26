@@ -3,8 +3,10 @@
 package de.nielsfalk.playground.ktor.swagger
 
 import de.nielsfalk.playground.ktor.swagger.ParameterInputType.body
-import de.nielsfalk.playground.ktor.swagger.ParameterInputType.header
 import de.nielsfalk.playground.ktor.swagger.ParameterInputType.query
+import io.ktor.application.Application
+import io.ktor.application.ApplicationCall
+import io.ktor.application.feature
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Location
@@ -27,7 +29,16 @@ typealias MethodName = String
 typealias HttpStatus = String
 typealias Methods = MutableMap<MethodName, Operation>
 
-val swagger = Swagger()
+/**
+ * Gets the [Application.swagger] feature
+ */
+val ApplicationCall.swagger get() = application.swagger
+
+/**
+ * Gets the [Application.swagger] feature
+ */
+val Application.swagger get() = feature(SwaggerSupport)
+
 
 class Swagger {
     val swagger = "2.0"
@@ -55,6 +66,8 @@ class Contact(
 
 class Operation(
         metadata: Metadata,
+        val responses: Map<HttpStatus, Response>,
+        val parameters : List<Parameter>,
         location: Location,
         group: Group?,
         method: HttpMethod,
@@ -62,48 +75,22 @@ class Operation(
         entityType: KClass<*>) {
     val tags = group?.toList()
     val summary = metadata.summary ?: "${method.value} ${location.path}"
-    val parameters = mutableListOf<Parameter>().apply {
-        if (entityType != Unit::class) {
-            addDefinition(entityType)
-            add(entityType.bodyParameter())
-        }
-        addAll(locationType.memberProperties.map { it.toParameter(location.path) })
-        metadata.parameter?.let {
-            addAll(it.memberProperties.map { it.toParameter(location.path, query) })
-        }
-        metadata.headers?.let {
-            addAll(it.memberProperties.map { it.toParameter(location.path, header) })
-        }
-    }
-
-    val responses: Map<HttpStatus, Response> = metadata.responses.map {
-        val (status, kClass) = it
-        addDefinition(kClass)
-        status.value.toString() to Response(status, kClass)
-    }.toMap()
 }
 
 private fun Group.toList(): List<Tag> {
     return listOf(Tag(name))
 }
 
-fun <T, R> KProperty1<T, R>.toParameter(path: String, inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query): Parameter {
-    return Parameter(toModelProperty(), name, inputType, required = !returnType.isMarkedNullable)
+fun <T, R> KProperty1<T, R>.toParameter(path: String, inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query): Pair<Parameter, Collection<KClass<*>>> {
+    return toModelProperty().let { Parameter(it.first, name, inputType, required = !returnType.isMarkedNullable) to it.second  }
 }
 
-private fun KClass<*>.bodyParameter() =
+internal fun KClass<*>.bodyParameter() =
         Parameter(referenceProperty(),
                 name = "body",
                 description = modelName(),
                 `in` = body
         )
-
-fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: Location, group: Group?, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
-    swagger.paths
-            .getOrPut(location.path) { mutableMapOf() }
-            .put(method.value.toLowerCase(),
-                    Operation(this, location, group, method, locationType, entityType))
-}
 
 class Response(httpStatusCode: HttpStatusCode, kClass: KClass<*>) {
     val description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription()
@@ -131,12 +118,18 @@ enum class ParameterInputType {
     query, path, body, header
 }
 
-class ModelData(kClass: KClass<*>) {
-    val properties: Map<PropertyName, Property> =
-            kClass.memberProperties
-                    .map { it.name to it.toModelProperty() }
-                    .toMap()
+fun createModelData(kClass: KClass<*>): Pair<ModelData, Collection<KClass<*>>> {
+    val collectedClassesToRegister = mutableListOf<KClass<*>>()
+    val modelProperties =
+        kClass.memberProperties.map {
+            val propertiesWithCollected = it.toModelProperty()
+            collectedClassesToRegister.addAll(propertiesWithCollected.second)
+            it.name to propertiesWithCollected.first
+        }.toMap()
+    return ModelData(modelProperties) to collectedClassesToRegister
 }
+
+class ModelData(val properties: Map<PropertyName, Property>)
 
 val propertyTypes = mapOf(
         Int::class to Property("integer", "int32"),
@@ -147,23 +140,23 @@ val propertyTypes = mapOf(
         Date::class to Property("string", "date-time"),
         LocalDateTime::class to Property("string", "date-time"),
         LocalDate::class to Property("string", "date")
-).mapKeys { it.key.qualifiedName }
+).mapKeys { it.key.qualifiedName }.mapValues { it.value to emptyList<KClass<*>>() }
 
-fun <T, R> KProperty1<T, R>.toModelProperty(): Property =
+fun <T, R> KProperty1<T, R>.toModelProperty(): Pair<Property, Collection<KClass<*>>> =
         (returnType.classifier as KClass<*>)
                 .toModelProperty(returnType)
 
-private fun KClass<*>.toModelProperty(returnType: KType? = null): Property =
+private fun KClass<*>.toModelProperty(returnType: KType? = null): Pair<Property, Collection<KClass<*>>> =
         propertyTypes[qualifiedName?.removeSuffix("?")] ?:
                 if (returnType != null && toString() == "class kotlin.collections.List") {
                     val kClass: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
-                    Property(items = kClass.toModelProperty(), type = "array")
+                    val items = kClass.toModelProperty()
+                    Property(items = items.first, type = "array") to items.second
                 } else if (java.isEnum) {
                     val enumConstants = (this).java.enumConstants
-                    Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string")
+                    Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string") to emptyKClassList
                 } else {
-                    addDefinition(this)
-                    referenceProperty()
+                    referenceProperty() to listOf(this)
                 }
 
 private fun KClass<*>.referenceProperty(): Property =
@@ -178,26 +171,8 @@ open class Property(val type: String?,
                     val description: String? = null,
                     val `$ref`: String? = null)
 
-inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
-    val clazz = LOCATION::class.java
-    val location = clazz.getAnnotation(Location::class.java)
-    val tags = clazz.getAnnotation(Group::class.java)
-    applyResponseDefinitions()
-    applyOperations(location, tags, method, LOCATION::class, ENTITY_TYPE::class)
-}
+private val emptyKClassList = emptyList<KClass<*>>()
 
-fun Metadata.applyResponseDefinitions() =
-        responses.values.forEach { addDefinition(it) }
-
-
-private fun addDefinition(kClass: KClass<*>) {
-    if (kClass != Unit::class) {
-        swagger.definitions.computeIfAbsent(kClass.modelName()) {
-            ModelData(kClass)
-        }
-    }
-}
-
-private fun KClass<*>.modelName(): ModelName = simpleName ?: toString()
+internal fun KClass<*>.modelName(): ModelName = simpleName ?: toString()
 
 annotation class Group(val name: String)

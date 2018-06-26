@@ -3,6 +3,7 @@
 package de.nielsfalk.playground.ktor.swagger
 
 import com.winterbe.expekt.should
+import io.ktor.application.Application
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
@@ -11,6 +12,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 
 data class ToyModel(val id: Int?, val name: String)
@@ -34,14 +36,23 @@ class Header(val optionalHeader: String?, val mandatoryHeader: Int)
 class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
 class SwaggerTest {
+    private lateinit var application: Application
+
+    private val swagger: Swagger
+        get() = application.swagger.swagger
+
     @Before
-    fun setUp(): Unit = withTestApplication {
-        //when:
-        application.install(Locations)
-        application.routing {
-            put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
-            get<toys>("all".responds(ok<ToysModel>(), notFound())) { }
-            get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
+    fun setUp() {
+        application = withTestApplication {
+            //when:
+            application.install(Locations)
+            application.routing {
+                put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
+                get<toys>("all".responds(ok<ToysModel>(), notFound())) { }
+                get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
+            }
+
+            this.application
         }
     }
 
@@ -108,12 +119,14 @@ class SwaggerTest {
         first, second, third
     }
 
+    fun createAndExtractModelData(kClass: KClass<*>) = createModelData(kClass).first
+
     @Test
     fun `enum Property`() {
         class Model(val enumValue: EnumClass?)
 
-        val property = ModelData(Model::class)
-                .properties["enumValue"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["enumValue"] as Property
 
         property.type.should.equal("string")
         property.enum.should.contain.elements("first", "second", "third")
@@ -123,8 +136,8 @@ class SwaggerTest {
     fun `instant Property`() {
         class Model(val timestamp: Instant?)
 
-        val property = ModelData(Model::class)
-                .properties["timestamp"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["timestamp"] as Property
 
         property.type.should.equal("string")
         property.format.should.equal("date-time")
@@ -134,8 +147,8 @@ class SwaggerTest {
     fun `localDate Property`() {
         class Model(val birthDate: LocalDate?)
 
-        val property = ModelData(Model::class)
-                .properties["birthDate"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["birthDate"] as Property
 
         property.type.should.equal("string")
         property.format.should.equal("date")
@@ -145,8 +158,8 @@ class SwaggerTest {
     fun `long Property`() {
         class Model(val long: Long?)
 
-        val property = ModelData(Model::class)
-                .properties["long"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["long"] as Property
 
         property.type.should.equal("integer")
         property.format.should.equal("int64")
@@ -156,8 +169,8 @@ class SwaggerTest {
     fun `double Property`() {
         class Model(val double: Double?)
 
-        val property = ModelData(Model::class)
-                .properties["double"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["double"] as Property
 
         property.type.should.equal("number")
         property.format.should.equal("double")
@@ -169,8 +182,8 @@ class SwaggerTest {
     fun `reference model property`() {
         class Model(val something: PropertyModel?)
 
-        val property = ModelData(Model::class)
-                .properties["something"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["something"] as Property
 
         property.`$ref`.should.equal("#/definitions/PropertyModel")
     }
@@ -179,8 +192,8 @@ class SwaggerTest {
     fun `string array`() {
         class Model(val something: List<String>)
 
-        val property = ModelData(Model::class)
-                .properties["something"] as Property
+        val property = createAndExtractModelData(Model::class)
+            .properties["something"] as Property
 
         property.type.should.equal("array")
         property.items?.type.should.equal("string")
@@ -190,7 +203,7 @@ class SwaggerTest {
 
     @Test
     fun `optional parameters`() {
-        val map = Parameters::class.memberProperties.map { it.toParameter("") }
+        val map = Parameters::class.memberProperties.map { it.toParameter("").first }
 
         map.find { it.name == "optional" }!!.required.should.equals(false)
         map.find { it.name == "mandatory" }!!.required.should.equals(true)

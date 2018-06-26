@@ -6,14 +6,14 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
-import io.ktor.locations.handle
-import io.ktor.locations.location
+import io.ktor.locations.delete
+import io.ktor.locations.get
 import io.ktor.locations.post
 import io.ktor.locations.put
 import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receive
 import io.ktor.routing.Route
-import io.ktor.routing.method
+import io.ktor.routing.application
 import kotlin.reflect.KClass
 
 data class Metadata(val responses: Map<HttpStatusCode, KClass<*>>, val summary: String? = null) {
@@ -39,33 +39,34 @@ inline fun <reified T> ok(): Pair<HttpStatusCode, KClass<*>> = OK to T::class
 inline fun notFound(): Pair<HttpStatusCode, KClass<*>> = NotFound to Unit::class
 
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
-    metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
+    application.swagger.apply {
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
+    }
+
     return post<LOCATION> {
         body(this, it, call.receive())
     }
 }
 
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
-    metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
+    application.swagger.apply {
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
+    }
     return put<LOCATION> {
         body(this, it, call.receive())
     }
 }
 
 inline fun <reified LOCATION : Any> Route.get(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
-    metadata.apply<LOCATION, Unit>(HttpMethod.Get)
-    return location(LOCATION::class) {
-        method(HttpMethod.Get) {
-            handle(body)
-        }
+    application.swagger.apply {
+        metadata.apply<LOCATION, Unit>(HttpMethod.Get)
     }
+    return get(body)
 }
 
 inline fun <reified LOCATION : Any> Route.delete(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
-    metadata.apply<LOCATION, Unit>(HttpMethod.Delete)
-    return location(LOCATION::class) {
-        method(HttpMethod.Delete) {
-            handle(body)
-        }
+    application.swagger.apply {
+        metadata.apply<LOCATION, Unit>(HttpMethod.Delete)
     }
+    return delete(body)
 }
