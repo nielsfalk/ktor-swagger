@@ -13,10 +13,10 @@ import org.junit.Test
 class SwaggerSupportTest {
     @Test
     fun `installed apidocs`(): Unit = withTestApplication {
-        //when
+        // when
         application.install(SwaggerSupport) { forwardRoot = true }
 
-        //then
+        // then
         handleRequest(HttpMethod.Get, "/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
         handleRequest(HttpMethod.Get, "/apidocs").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
         handleRequest(HttpMethod.Get, "/apidocs/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
@@ -24,22 +24,22 @@ class SwaggerSupportTest {
 
     @Test
     fun `provide webjar`(): Unit = withTestApplication {
-        //when
+        // when
         application.install(SwaggerSupport) { forwardRoot = true }
 
-        //then
+        // then
         handleRequest(HttpMethod.Get, "/apidocs/index.html").response.content.should.contain("<title>Swagger UI</title>")
     }
 
     @Test
     fun `provide swaggerJson`(): Unit = withTestApplication {
-        //when
+        // when
         application.install(ContentNegotiation) {
             register(ContentType.Application.Json, GsonConverter())
         }
         application.install(SwaggerSupport) { forwardRoot = true }
 
-        //then
+        // then
         handleRequest {
             uri = "/apidocs/swagger.json"
             method = HttpMethod.Get

@@ -44,7 +44,7 @@ class SwaggerTest {
     @Before
     fun setUp() {
         application = withTestApplication {
-            //when:
+            // when:
             application.install(Locations)
             application.routing {
                 put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
@@ -176,7 +176,7 @@ class SwaggerTest {
         property.format.should.equal("double")
     }
 
-    class PropertyModel {}
+    class PropertyModel
 
     @Test
     fun `reference model property`() {

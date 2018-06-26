@@ -12,8 +12,22 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${property("kotlin.version")}")
     }
 }
+plugins {
+    // https://github.com/diffplug/spotless/tree/master/plugin-gradle
+    id("com.diffplug.gradle.spotless") version "3.10.0"
+}
+
+object Versions {
+    /**
+     * The version of KtLint to be used for linting the Kotlin and Kotlin Script files.
+     */
+    const val KTLINT = "0.23.1"
+}
 
 allprojects {
+    apply {
+        plugin("com.diffplug.gradle.spotless")
+    }
     group = "de.nielsfalk.playground"
     version = "0.1-SNAPSHOT"
 
@@ -47,6 +61,14 @@ subprojects {
     kotlin {
         // Enable coroutines supports for Kotlin.
         experimental.coroutines = Coroutines.ENABLE
+    }
+
+    spotless {
+        kotlin {
+            ktlint(Versions.KTLINT)
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
     }
 }
 

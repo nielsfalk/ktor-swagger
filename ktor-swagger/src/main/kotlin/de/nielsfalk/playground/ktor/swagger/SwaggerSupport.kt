@@ -112,8 +112,6 @@ class SwaggerSupport(
             )
     }
 
-
-
     fun Metadata.applyResponseDefinitions() =
         responses.values.forEach { addDefinition(it) }
 

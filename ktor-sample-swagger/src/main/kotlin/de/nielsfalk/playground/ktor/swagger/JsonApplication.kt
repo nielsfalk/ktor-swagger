@@ -77,7 +77,7 @@ fun main(args: Array<String>) {
                 call.respond(data)
             }
             post<pets, PetModel>("create".responds(ok<PetModel>())) { _, entity ->
-                //http201 would be better but there is no way to do this see org.jetbrains.ktor.gson.GsonSupport.renderJsonContent
+                // http201 would be better but there is no way to do this see org.jetbrains.ktor.gson.GsonSupport.renderJsonContent
                 call.respond(entity.copy(id = newId()).apply {
                     data.pets.add(this)
                 })
@@ -138,4 +138,3 @@ private fun Map<String, StringValues>.format() =
     }
         .map { (key, value) -> "$key:\n$value" }
         .joinToString(separator = "\n\n")
-

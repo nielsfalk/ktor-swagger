@@ -39,7 +39,6 @@ val ApplicationCall.swagger get() = application.swagger
  */
 val Application.swagger get() = feature(SwaggerSupport)
 
-
 class Swagger {
     val swagger = "2.0"
     var info: Information? = null
@@ -48,31 +47,32 @@ class Swagger {
 }
 
 class Information(
-        val description: String? = null,
-        val version: String? = null,
-        val title: String? = null,
-        val contact: Contact? = null
+    val description: String? = null,
+    val version: String? = null,
+    val title: String? = null,
+    val contact: Contact? = null
 )
 
 data class Tag(
-        val name: String
+    val name: String
 )
 
 class Contact(
-        val name: String? = null,
-        val url: String? = null,
-        val email: String? = null
+    val name: String? = null,
+    val url: String? = null,
+    val email: String? = null
 )
 
 class Operation(
-        metadata: Metadata,
-        val responses: Map<HttpStatus, Response>,
-        val parameters : List<Parameter>,
-        location: Location,
-        group: Group?,
-        method: HttpMethod,
-        locationType: KClass<*>,
-        entityType: KClass<*>) {
+    metadata: Metadata,
+    val responses: Map<HttpStatus, Response>,
+    val parameters: List<Parameter>,
+    location: Location,
+    group: Group?,
+    method: HttpMethod,
+    locationType: KClass<*>,
+    entityType: KClass<*>
+) {
     val tags = group?.toList()
     val summary = metadata.summary ?: "${method.value} ${location.path}"
 }
@@ -82,7 +82,7 @@ private fun Group.toList(): List<Tag> {
 }
 
 fun <T, R> KProperty1<T, R>.toParameter(path: String, inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query): Pair<Parameter, Collection<KClass<*>>> {
-    return toModelProperty().let { Parameter(it.first, name, inputType, required = !returnType.isMarkedNullable) to it.second  }
+    return toModelProperty().let { Parameter(it.first, name, inputType, required = !returnType.isMarkedNullable) to it.second }
 }
 
 internal fun KClass<*>.bodyParameter() =
@@ -102,16 +102,16 @@ fun KClass<*>.responseDescription(): String = modelName()
 class ModelReference(val `$ref`: String)
 
 class Parameter(
-        property: de.nielsfalk.playground.ktor.swagger.Property,
-        val name: String,
-        val `in`: ParameterInputType,
-        val description: String = property.description ?: name,
-        val required: Boolean = true,
-        val type: String? = property.type,
-        val format: String? = property.format,
-        val enum: List<String>? = property.enum,
-        val items: Property? = property.items,
-        val schema: ModelReference? = property.`$ref`?.let { ModelReference(it) }
+    property: de.nielsfalk.playground.ktor.swagger.Property,
+    val name: String,
+    val `in`: ParameterInputType,
+    val description: String = property.description ?: name,
+    val required: Boolean = true,
+    val type: String? = property.type,
+    val format: String? = property.format,
+    val enum: List<String>? = property.enum,
+    val items: Property? = property.items,
+    val schema: ModelReference? = property.`$ref`?.let { ModelReference(it) }
 )
 
 enum class ParameterInputType {
@@ -147,8 +147,8 @@ fun <T, R> KProperty1<T, R>.toModelProperty(): Pair<Property, Collection<KClass<
                 .toModelProperty(returnType)
 
 private fun KClass<*>.toModelProperty(returnType: KType? = null): Pair<Property, Collection<KClass<*>>> =
-        propertyTypes[qualifiedName?.removeSuffix("?")] ?:
-                if (returnType != null && toString() == "class kotlin.collections.List") {
+        propertyTypes[qualifiedName?.removeSuffix("?")]
+                ?: if (returnType != null && toString() == "class kotlin.collections.List") {
                     val kClass: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
                     val items = kClass.toModelProperty()
                     Property(items = items.first, type = "array") to items.second
@@ -164,12 +164,14 @@ private fun KClass<*>.referenceProperty(): Property =
                 description = modelName(),
                 type = null)
 
-open class Property(val type: String?,
-                    val format: String? = null,
-                    val enum: List<String>? = null,
-                    val items: Property? = null,
-                    val description: String? = null,
-                    val `$ref`: String? = null)
+open class Property(
+    val type: String?,
+    val format: String? = null,
+    val enum: List<String>? = null,
+    val items: Property? = null,
+    val description: String? = null,
+    val `$ref`: String? = null
+)
 
 private val emptyKClassList = emptyList<KClass<*>>()
 
