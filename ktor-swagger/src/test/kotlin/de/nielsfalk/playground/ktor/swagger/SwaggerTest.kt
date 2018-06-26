@@ -3,7 +3,6 @@
 package de.nielsfalk.playground.ktor.swagger
 
 import com.winterbe.expekt.should
-import io.ktor.application.Application
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
@@ -36,23 +35,22 @@ class Header(val optionalHeader: String?, val mandatoryHeader: Int)
 class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
 class SwaggerTest {
-    private lateinit var application: Application
-
-    private val swagger: Swagger
-        get() = application.swagger.swagger
+    private lateinit var swagger: Swagger
 
     @Before
     fun setUp() {
-        application = withTestApplication {
+        withTestApplication({
+            install(Locations)
+            install(SwaggerSupport)
+        }) {
             // when:
-            application.install(Locations)
             application.routing {
                 put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
                 get<toys>("all".responds(ok<ToysModel>(), notFound())) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
 
-            this.application
+            this@SwaggerTest.swagger = this.application.swagger.swagger
         }
     }
 

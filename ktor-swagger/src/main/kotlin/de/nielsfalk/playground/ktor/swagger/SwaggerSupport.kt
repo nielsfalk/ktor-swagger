@@ -21,7 +21,7 @@ class SwaggerSupport(
     val swagger: Swagger
 ) {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
-        override val key = AttributeKey<SwaggerSupport>("gson")
+        override val key = AttributeKey<SwaggerSupport>("SwaggerSupport")
 
         override fun install(application: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
             val (path, forwardRoot, provideUi, swagger) = SwaggerUiConfiguration().apply(configure)
