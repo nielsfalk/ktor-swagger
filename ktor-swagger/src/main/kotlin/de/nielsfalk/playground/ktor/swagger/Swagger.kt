@@ -2,22 +2,21 @@
 
 package de.nielsfalk.playground.ktor.swagger
 
-import de.nielsfalk.playground.ktor.swagger.ParameterInputType.*
-import org.jetbrains.ktor.http.HttpMethod
-import org.jetbrains.ktor.http.HttpStatusCode
-import org.jetbrains.ktor.locations.location
+import de.nielsfalk.playground.ktor.swagger.ParameterInputType.body
+import de.nielsfalk.playground.ktor.swagger.ParameterInputType.header
+import de.nielsfalk.playground.ktor.swagger.ParameterInputType.query
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.locations.Location
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Date
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.full.memberProperties
 
-/**
- * @author Niels Falk
- */
 typealias ModelName = String
 typealias PropertyName = String
 typealias Path = String
@@ -55,7 +54,7 @@ class Contact(
 
 class Operation(
         metadata: Metadata,
-        location: location,
+        location: Location,
         group: group?,
         method: HttpMethod,
         locationType: KClass<*>,
@@ -98,7 +97,7 @@ private fun KClass<*>.bodyParameter() =
                 `in` = body
         )
 
-fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: location, group: group?, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
+fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(location: Location, group: group?, method: HttpMethod, locationType: KClass<LOCATION>, entityType: KClass<BODY_TYPE>) {
     swagger.paths
             .getOrPut(location.path) { mutableMapOf() }
             .put(method.value.toLowerCase(),
@@ -180,7 +179,7 @@ open class Property(val type: String?,
 
 inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
     val clazz = LOCATION::class.java
-    val location = clazz.getAnnotation(location::class.java)
+    val location = clazz.getAnnotation(Location::class.java)
     val tags = clazz.getAnnotation(group::class.java)
     applyResponseDefinitions()
     applyOperations(location, tags, method, LOCATION::class, ENTITY_TYPE::class)

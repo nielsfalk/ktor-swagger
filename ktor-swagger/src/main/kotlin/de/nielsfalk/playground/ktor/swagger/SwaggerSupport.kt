@@ -1,19 +1,17 @@
 package de.nielsfalk.playground.ktor.swagger
 
-import org.jetbrains.ktor.application.Application
-import org.jetbrains.ktor.application.ApplicationFeature
-import org.jetbrains.ktor.application.featureOrNull
-import org.jetbrains.ktor.application.install
-import org.jetbrains.ktor.pipeline.PipelineContext
-import org.jetbrains.ktor.response.respond
-import org.jetbrains.ktor.response.respondRedirect
-import org.jetbrains.ktor.routing.Routing
-import org.jetbrains.ktor.routing.get
-import org.jetbrains.ktor.util.AttributeKey
-
-/**
- * @author Niels Falk
- */
+import io.ktor.application.Application
+import io.ktor.application.ApplicationCall
+import io.ktor.application.ApplicationFeature
+import io.ktor.application.call
+import io.ktor.application.featureOrNull
+import io.ktor.application.install
+import io.ktor.pipeline.PipelineContext
+import io.ktor.response.respond
+import io.ktor.response.respondRedirect
+import io.ktor.routing.Routing
+import io.ktor.routing.get
+import io.ktor.util.AttributeKey
 
 
 class SwaggerSupport() {
@@ -45,7 +43,7 @@ class SwaggerSupport() {
             return feature
         }
 
-        private suspend fun PipelineContext<Unit>.redirect(path: String) {
+        private suspend fun PipelineContext<Unit, ApplicationCall>.redirect(path: String) {
             call.respondRedirect("/$path/index.html?url=swagger.json")
         }
     }

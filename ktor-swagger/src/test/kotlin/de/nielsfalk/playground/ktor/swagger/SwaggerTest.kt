@@ -3,11 +3,10 @@
 package de.nielsfalk.playground.ktor.swagger
 
 import com.winterbe.expekt.should
-import org.jetbrains.ktor.application.install
-import org.jetbrains.ktor.locations.Locations
-import org.jetbrains.ktor.locations.location
-import org.jetbrains.ktor.routing.routing
-import org.jetbrains.ktor.testing.withTestApplication
+import io.ktor.application.install
+import io.ktor.locations.Location
+import io.ktor.locations.Locations
+import io.ktor.server.testing.withTestApplication
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -22,13 +21,13 @@ data class ToysModel(val toys: MutableList<ToyModel>)
  */
 
 @group("toy")
-@location("/toys/{id}")
+@Location("/toys/{id}")
 class toy(val id: Int)
 
-@location("/toys")
+@Location("/toys")
 class toys
 
-@location("/withParameter")
+@Location("/withParameter")
 class withParameter
 
 class Header(val optionalHeader: String?, val mandatoryHeader: Int)
