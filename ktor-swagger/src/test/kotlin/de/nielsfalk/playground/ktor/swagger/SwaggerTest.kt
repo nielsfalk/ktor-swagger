@@ -123,7 +123,8 @@ class SwaggerTest {
         first, second, third
     }
 
-    fun createAndExtractModelData(kClass: KClass<*>) = createModelData(kClass).first
+    private fun createAndExtractModelData(kClass: KClass<*>) =
+        createModelData(kClass).first
 
     @Test
     fun `enum Property`() {
@@ -209,8 +210,8 @@ class SwaggerTest {
     fun `optional parameters`() {
         val map = Parameters::class.memberProperties.map { it.toParameter("").first }
 
-        map.find { it.name == "optional" }!!.required.should.equals(false)
-        map.find { it.name == "mandatory" }!!.required.should.equals(true)
+        map.find { it.name == "optional" }!!.required.should.equal(false)
+        map.find { it.name == "mandatory" }!!.required.should.equal(true)
     }
 }
 
