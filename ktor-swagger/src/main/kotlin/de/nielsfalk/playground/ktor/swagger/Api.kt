@@ -4,6 +4,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
 import io.ktor.locations.delete
@@ -36,6 +37,7 @@ fun responds(pair: Pair<HttpStatusCode, KClass<*>>) = Metadata(responses = mapOf
 fun responses(vararg pairs: Pair<HttpStatusCode, KClass<*>>) = Metadata(responses = mapOf(*pairs))
 
 inline fun <reified T> ok(): Pair<HttpStatusCode, KClass<*>> = OK to T::class
+inline fun <reified T> created(): Pair<HttpStatusCode, KClass<*>> = Created to T::class
 inline fun notFound(): Pair<HttpStatusCode, KClass<*>> = NotFound to Unit::class
 
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {

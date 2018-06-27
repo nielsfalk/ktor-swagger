@@ -17,10 +17,6 @@ import kotlin.reflect.full.memberProperties
 data class ToyModel(val id: Int?, val name: String)
 data class ToysModel(val toys: MutableList<ToyModel>)
 
-/**
- * @author Niels Falk
- */
-
 @Group("toy")
 @Location("/toys/{id}")
 class toy(val id: Int)

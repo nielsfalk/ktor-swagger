@@ -8,6 +8,7 @@ import io.ktor.features.Compression
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.DefaultHeaders
 import io.ktor.gson.gson
+import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
 import io.ktor.pipeline.PipelineContext
@@ -76,9 +77,8 @@ fun main(args: Array<String>) {
             get<pets>("all".responds(ok<PetsModel>())) {
                 call.respond(data)
             }
-            post<pets, PetModel>("create".responds(ok<PetModel>())) { _, entity ->
-                // http201 would be better but there is no way to do this see org.jetbrains.ktor.gson.GsonSupport.renderJsonContent
-                call.respond(entity.copy(id = newId()).apply {
+            post<pets, PetModel>("create".responds(created<PetModel>())) { _, entity ->
+                call.respond(Created, entity.copy(id = newId()).apply {
                     data.pets.add(this)
                 })
             }
