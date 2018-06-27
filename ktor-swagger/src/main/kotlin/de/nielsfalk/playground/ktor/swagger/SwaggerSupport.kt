@@ -23,10 +23,10 @@ class SwaggerSupport(
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
         override val key = AttributeKey<SwaggerSupport>("SwaggerSupport")
 
-        override fun install(application: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
+        override fun install(pipeline: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
             val (path, forwardRoot, provideUi, swagger) = SwaggerUiConfiguration().apply(configure)
             val feature = SwaggerSupport(swagger)
-            application.routing {
+            pipeline.routing {
                 get("/$path") {
                     redirect(path)
                 }

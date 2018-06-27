@@ -14,7 +14,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Date
-import java.util.concurrent.ConcurrentSkipListMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
@@ -43,7 +42,7 @@ class Swagger {
     val swagger = "2.0"
     var info: Information? = null
     val paths: Paths = mutableMapOf()
-    val definitions: Definitions = ConcurrentSkipListMap()
+    val definitions: Definitions = mutableMapOf()
 }
 
 class Information(
