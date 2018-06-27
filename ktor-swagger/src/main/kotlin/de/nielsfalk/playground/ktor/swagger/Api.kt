@@ -17,18 +17,15 @@ import io.ktor.routing.Route
 import io.ktor.routing.application
 import kotlin.reflect.KClass
 
-data class Metadata(val responses: Map<HttpStatusCode, KClass<*>>, val summary: String? = null) {
-    var headers: KClass<*>? = null
-    var parameter: KClass<*>? = null
-    inline fun <reified T> header(): Metadata {
-        this.headers = T::class
-        return this
-    }
+data class Metadata(
+    val responses: Map<HttpStatusCode, KClass<*>>,
+    val summary: String? = null,
+    val headers: KClass<*>? = null,
+    val parameter: KClass<*>? = null
+) {
+    inline fun <reified T> header(): Metadata = copy(headers = T::class)
 
-    inline fun <reified T> parameter(): Metadata {
-        this.parameter = T::class
-        return this
-    }
+    inline fun <reified T> parameter(): Metadata = copy(parameter = T::class)
 }
 
 fun String.responds(vararg pairs: Pair<HttpStatusCode, KClass<*>>): Metadata = Metadata(responses = mapOf(*pairs), summary = this)
