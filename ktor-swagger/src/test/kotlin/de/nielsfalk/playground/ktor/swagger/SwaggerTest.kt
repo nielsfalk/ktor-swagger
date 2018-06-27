@@ -17,11 +17,13 @@ import kotlin.reflect.full.memberProperties
 data class ToyModel(val id: Int?, val name: String)
 data class ToysModel(val toys: MutableList<ToyModel>)
 
+const val toysLocation = "/toys/{id}"
 @Group("toy")
-@Location("/toys/{id}")
+@Location(toysLocation)
 class toy(val id: Int)
 
-@Location("/toys")
+const val toyLocation = "/toys"
+@Location(toyLocation)
 class toys
 
 @Location("/withParameter")
@@ -42,6 +44,7 @@ class SwaggerTest {
             // when:
             application.routing {
                 put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
+                post<toys, ToyModel>("create".responds(created<ToyModel>())) { _, _ -> }
                 get<toys>("all".responds(ok<ToysModel>(), notFound())) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
@@ -51,8 +54,8 @@ class SwaggerTest {
     }
 
     @Test
-    fun `post toy operation with path and body parameter`() {
-        val parameters = swagger.paths.get("/toys/{id}")?.get("put")?.parameters
+    fun `put toy operation with path and body parameter`() {
+        val parameters = swagger.paths.get(toysLocation)?.get("put")?.parameters
         val paraderTypes = parameters?.map { it.`in` }
 
         paraderTypes.should.contain(ParameterInputType.body)
@@ -60,18 +63,25 @@ class SwaggerTest {
     }
 
     @Test
-    fun `post toy operation with 200 and 404 response`() {
-        val responses = swagger.paths.get("/toys/{id}")?.get("put")?.responses
+    fun `put toy operation with 200 and 404 response`() {
+        val responses = swagger.paths.get(toysLocation)?.get("put")?.responses
 
         responses?.keys.should.contain("404")
         responses?.get("200")?.schema?.`$ref`.should.equal("#/definitions/ToyModel")
     }
 
     @Test
-    fun `post toy operation with tag`() {
-        val tags = swagger.paths.get("/toys/{id}")?.get("put")?.tags
+    fun `put toy operation with tag`() {
+        val tags = swagger.paths.get(toysLocation)?.get("put")?.tags
 
         tags?.map { it.name }.should.equal(listOf("toy"))
+    }
+
+    @Test
+    fun `post toy operation labeled create`() {
+        val responses = swagger.paths[toyLocation]?.get("post")?.responses
+
+        responses?.keys.should.contain("201")
     }
 
     @Test
