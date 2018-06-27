@@ -84,18 +84,18 @@ class SwaggerSupport(
                     add(entityType.bodyParameter())
                 }
                 addAll(locationType.memberProperties.map { it.toParameter(location.path).let {
-                    addDefintions(it.second)
+                    addDefinitions(it.second)
                     it.first
                 } })
                 parameter?.let {
                     addAll(it.memberProperties.map { it.toParameter(location.path, ParameterInputType.query).let {
-                        addDefintions(it.second)
+                        addDefinitions(it.second)
                         it.first
                     } })
                 }
                 headers?.let {
                     addAll(it.memberProperties.map { it.toParameter(location.path, ParameterInputType.header).let {
-                        addDefintions(it.second)
+                        addDefinitions(it.second)
                         it.first
                     } })
                 }
@@ -128,7 +128,7 @@ class SwaggerSupport(
         }
     }
 
-    private fun addDefintions(kClasses: Collection<KClass<*>>) = kClasses.forEach { addDefinition(it) }
+    private fun addDefinitions(kClasses: Collection<KClass<*>>) = kClasses.forEach { addDefinition(it) }
 }
 
 data class SwaggerUiConfiguration(
