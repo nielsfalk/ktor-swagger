@@ -4,15 +4,13 @@ import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationFeature
 import io.ktor.application.call
-import io.ktor.application.featureOrNull
-import io.ktor.application.install
 import io.ktor.http.HttpMethod
 import io.ktor.locations.Location
 import io.ktor.pipeline.PipelineContext
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
-import io.ktor.routing.Routing
 import io.ktor.routing.get
+import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
@@ -137,7 +135,3 @@ data class SwaggerUiConfiguration(
     var provideUi: Boolean = true,
     var swagger: Swagger = Swagger()
 )
-
-fun Application.routing(configure: Routing.() -> Unit) =
-    featureOrNull(Routing)?.apply(configure)
-        ?: install(Routing, configure)

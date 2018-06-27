@@ -11,6 +11,7 @@ import io.ktor.locations.delete
 import io.ktor.locations.get
 import io.ktor.locations.post
 import io.ktor.locations.put
+import io.ktor.pipeline.ContextDsl
 import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receive
 import io.ktor.routing.Route
@@ -37,6 +38,7 @@ inline fun <reified T> ok(): Pair<HttpStatusCode, KClass<*>> = OK to T::class
 inline fun <reified T> created(): Pair<HttpStatusCode, KClass<*>> = Created to T::class
 inline fun notFound(): Pair<HttpStatusCode, KClass<*>> = NotFound to Unit::class
 
+@ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
@@ -47,6 +49,7 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: M
     }
 }
 
+@ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
@@ -56,6 +59,7 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(metadata: Me
     }
 }
 
+@ContextDsl
 inline fun <reified LOCATION : Any> Route.get(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, Unit>(HttpMethod.Get)
@@ -63,6 +67,7 @@ inline fun <reified LOCATION : Any> Route.get(metadata: Metadata, noinline body:
     return get(body)
 }
 
+@ContextDsl
 inline fun <reified LOCATION : Any> Route.delete(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, Unit>(HttpMethod.Delete)

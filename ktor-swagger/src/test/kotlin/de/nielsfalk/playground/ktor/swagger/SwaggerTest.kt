@@ -6,6 +6,7 @@ import com.winterbe.expekt.should
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
+import io.ktor.routing.routing
 import io.ktor.server.testing.withTestApplication
 import org.junit.Before
 import org.junit.Test
