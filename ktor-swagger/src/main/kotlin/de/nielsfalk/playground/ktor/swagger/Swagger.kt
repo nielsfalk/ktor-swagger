@@ -80,16 +80,27 @@ private fun Group.toList(): List<Tag> {
     return listOf(Tag(name))
 }
 
-fun <T, R> KProperty1<T, R>.toParameter(path: String, inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query): Pair<Parameter, Collection<KClass<*>>> {
-    return toModelProperty().let { Parameter(it.first, name, inputType, required = !returnType.isMarkedNullable) to it.second }
+fun <T, R> KProperty1<T, R>.toParameter(
+    path: String,
+    inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query
+): Pair<Parameter, Collection<KClass<*>>> {
+    return toModelProperty().let {
+        Parameter(
+            it.first,
+            name,
+            inputType,
+            required = !returnType.isMarkedNullable
+        ) to it.second
+    }
 }
 
 internal fun KClass<*>.bodyParameter() =
-        Parameter(referenceProperty(),
-                name = "body",
-                description = modelName(),
-                `in` = body
-        )
+    Parameter(
+        referenceProperty(),
+        name = "body",
+        description = modelName(),
+        `in` = body
+    )
 
 class Response(httpStatusCode: HttpStatusCode, kClass: KClass<*>) {
     val description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription()
@@ -131,37 +142,39 @@ fun createModelData(kClass: KClass<*>): Pair<ModelData, Collection<KClass<*>>> {
 class ModelData(val properties: Map<PropertyName, Property>)
 
 val propertyTypes = mapOf(
-        Int::class to Property("integer", "int32"),
-        Long::class to Property("integer", "int64"),
-        String::class to Property("string"),
-        Double::class to Property("number", "double"),
-        Instant::class to Property("string", "date-time"),
-        Date::class to Property("string", "date-time"),
-        LocalDateTime::class to Property("string", "date-time"),
-        LocalDate::class to Property("string", "date")
+    Int::class to Property("integer", "int32"),
+    Long::class to Property("integer", "int64"),
+    String::class to Property("string"),
+    Double::class to Property("number", "double"),
+    Instant::class to Property("string", "date-time"),
+    Date::class to Property("string", "date-time"),
+    LocalDateTime::class to Property("string", "date-time"),
+    LocalDate::class to Property("string", "date")
 ).mapKeys { it.key.qualifiedName }.mapValues { it.value to emptyList<KClass<*>>() }
 
 fun <T, R> KProperty1<T, R>.toModelProperty(): Pair<Property, Collection<KClass<*>>> =
-        (returnType.classifier as KClass<*>)
-                .toModelProperty(returnType)
+    (returnType.classifier as KClass<*>)
+        .toModelProperty(returnType)
 
 private fun KClass<*>.toModelProperty(returnType: KType? = null): Pair<Property, Collection<KClass<*>>> =
-        propertyTypes[qualifiedName?.removeSuffix("?")]
-                ?: if (returnType != null && toString() == "class kotlin.collections.List") {
-                    val kClass: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
-                    val items = kClass.toModelProperty()
-                    Property(items = items.first, type = "array") to items.second
-                } else if (java.isEnum) {
-                    val enumConstants = (this).java.enumConstants
-                    Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string") to emptyKClassList
-                } else {
-                    referenceProperty() to listOf(this)
-                }
+    propertyTypes[qualifiedName?.removeSuffix("?")]
+        ?: if (returnType != null && toString() == "class kotlin.collections.List") {
+            val kClass: KClass<*> = returnType.arguments.first().type?.classifier as KClass<*>
+            val items = kClass.toModelProperty()
+            Property(items = items.first, type = "array") to items.second
+        } else if (java.isEnum) {
+            val enumConstants = (this).java.enumConstants
+            Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string") to emptyKClassList
+        } else {
+            referenceProperty() to listOf(this)
+        }
 
 private fun KClass<*>.referenceProperty(): Property =
-        Property(`$ref` = "#/definitions/" + modelName(),
-                description = modelName(),
-                type = null)
+    Property(
+        `$ref` = "#/definitions/" + modelName(),
+        description = modelName(),
+        type = null
+    )
 
 open class Property(
     val type: String?,
