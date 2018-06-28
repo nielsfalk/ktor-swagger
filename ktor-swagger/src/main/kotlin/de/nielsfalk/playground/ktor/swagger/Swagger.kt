@@ -22,7 +22,7 @@ import kotlin.reflect.full.memberProperties
 typealias ModelName = String
 typealias PropertyName = String
 typealias Path = String
-typealias Definitions = MutableMap<ModelName, ModelData>
+typealias Definitions = MutableMap<ModelName, Any>
 typealias Paths = MutableMap<Path, Methods>
 typealias MethodName = String
 typealias HttpStatus = String
@@ -127,7 +127,14 @@ class Response(
         fun create(httpStatusCode: HttpStatusCode, kClass: KClass<*>): Response {
             return Response(
                 description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription(),
-                schema = if (kClass == Unit::class) null else ModelReference("#/definitions/" + kClass.modelName())
+                schema = if (kClass == Unit::class) null else ModelReference.create(kClass.modelName())
+            )
+        }
+
+        fun create(modelName: String): Response {
+            return Response(
+                description = modelName,
+                schema = ModelReference.create(modelName)
             )
         }
     }
@@ -135,7 +142,13 @@ class Response(
 
 fun KClass<*>.responseDescription(): String = modelName()
 
-class ModelReference(val `$ref`: String)
+class ModelReference(val `$ref`: String) {
+    companion object {
+        fun create(modelName: String) = ModelReference(
+            "#/definitions/$modelName"
+        )
+    }
+}
 
 class Parameter(
     val name: String,

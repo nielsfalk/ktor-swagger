@@ -55,7 +55,7 @@ class SwaggerSupport(
         val clazz = LOCATION::class.java
         val location = clazz.getAnnotation(Location::class.java)
         val tags = clazz.getAnnotation(Group::class.java)
-        applyResponseDefinitions()
+
         applyOperations(location, tags, method, LOCATION::class, ENTITY_TYPE::class)
     }
 
@@ -68,9 +68,19 @@ class SwaggerSupport(
     ) {
 
         fun createOperation(): Operation {
-            val responses = responses.map { (status, kClass) ->
-                addDefinition(kClass)
-                status.value.toString() to Response.create(status, kClass)
+            val responses = responses.map { (status, type ) ->
+                val response = when (type) {
+                    is ResponseFromReflection -> {
+                        addDefinition(type.kClass)
+                        Response.create(status, type.kClass)
+                    }
+                    is ResponseSchema -> {
+                        swagger.definitions.putIfAbsent(type.name, type.schema)
+                        Response.create(type.name)
+                    }
+                }
+
+                status.value.toString() to response
             }.toMap()
 
             if (entityType != Unit::class) {
@@ -109,9 +119,6 @@ class SwaggerSupport(
                 createOperation()
             )
     }
-
-    fun Metadata.applyResponseDefinitions() =
-        responses.values.forEach { addDefinition(it) }
 
     private fun addDefinition(kClass: KClass<*>) {
         if (kClass != Unit::class) {

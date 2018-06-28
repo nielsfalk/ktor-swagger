@@ -19,7 +19,7 @@ import io.ktor.routing.application
 import kotlin.reflect.KClass
 
 data class Metadata(
-    val responses: Map<HttpStatusCode, KClass<*>>,
+    val responses: Map<HttpStatusCode, ResponseType>,
     val summary: String? = null,
     val headers: KClass<*>? = null,
     val parameter: KClass<*>? = null
@@ -29,14 +29,20 @@ data class Metadata(
     inline fun <reified T> parameter(): Metadata = copy(parameter = T::class)
 }
 
-fun String.responds(vararg pairs: Pair<HttpStatusCode, KClass<*>>): Metadata = Metadata(responses = mapOf(*pairs), summary = this)
+fun String.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata = Metadata(responses = mapOf(*pairs), summary = this)
 
-fun responds(pair: Pair<HttpStatusCode, KClass<*>>) = Metadata(responses = mapOf(pair))
-fun responses(vararg pairs: Pair<HttpStatusCode, KClass<*>>) = Metadata(responses = mapOf(*pairs))
+fun responds(pair: Pair<HttpStatusCode, ResponseType>) = Metadata(responses = mapOf(pair))
+fun responses(vararg pairs: Pair<HttpStatusCode, ResponseType>) = Metadata(responses = mapOf(*pairs))
 
-inline fun <reified T> ok(): Pair<HttpStatusCode, KClass<*>> = OK to T::class
-inline fun <reified T> created(): Pair<HttpStatusCode, KClass<*>> = Created to T::class
-inline fun notFound(): Pair<HttpStatusCode, KClass<*>> = NotFound to Unit::class
+sealed class ResponseType
+
+data class ResponseFromReflection(val kClass: KClass<*>) : ResponseType()
+data class ResponseSchema(val name: String, val schema: Any) : ResponseType()
+
+inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(T::class)
+fun ok(name: String, schema: Any) = OK to ResponseSchema(name, schema)
+inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(T::class)
+inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(Unit::class)
 
 @ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {

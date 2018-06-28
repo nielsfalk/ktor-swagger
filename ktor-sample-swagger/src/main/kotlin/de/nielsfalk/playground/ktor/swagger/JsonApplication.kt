@@ -8,11 +8,13 @@ import io.ktor.features.Compression
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.DefaultHeaders
 import io.ktor.gson.gson
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
 import io.ktor.pipeline.PipelineContext
 import io.ktor.response.respond
+import io.ktor.response.respondText
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -24,6 +26,19 @@ data class PetModel(val id: Int?, val name: String)
 
 data class PetsModel(val pets: MutableList<PetModel>)
 
+val sizeSchemaMap = mapOf(
+    "type" to "number",
+    "minimum" to 0
+)
+
+val rectangleSchemaMap = mapOf(
+    "type" to "object",
+    "properties" to mapOf(
+        "a" to mapOf("${'$'}ref" to "#/definitions/size"),
+        "b" to mapOf("${'$'}ref" to "#/definitions/size")
+    )
+)
+
 val data = PetsModel(mutableListOf(PetModel(1, "max"), PetModel(2, "moritz")))
 fun newId() = ((data.pets.map { it.id ?: 0 }.max()) ?: 0) + 1
 
@@ -34,6 +49,10 @@ class pet(val id: Int)
 @Group("pet operations")
 @Location("/pets")
 class pets
+
+@Group("shape operations")
+@Location("/shapes")
+class shapes
 
 @Group("debug")
 @Location("/request/info")
@@ -73,6 +92,7 @@ fun main(args: Array<String>) {
                     url = "https://nielsfalk.de"
                 )
             )
+            swagger.definitions["size"] = sizeSchemaMap
         }
         routing {
             get<pets>("all".responds(ok<PetsModel>())) {
@@ -99,6 +119,14 @@ fun main(args: Array<String>) {
                 if (data.pets.removeIf { it.id == params.id }) {
                     call.respond(Unit)
                 }
+            }
+            get<shapes>("all".responds(ok("Rectangle", rectangleSchemaMap))) {
+                call.respondText("""
+                    {
+                        "a" : 10,
+                        "b" : 25
+                    }
+                """.trimIndent(), ContentType.Application.Json)
             }
             get<requestInfo>(
                 responds(ok<Unit>()),

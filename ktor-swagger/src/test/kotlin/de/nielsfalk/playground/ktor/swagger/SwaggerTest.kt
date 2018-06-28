@@ -87,7 +87,7 @@ class SwaggerTest {
 
     @Test
     fun `ToysModel with array properties`() {
-        val toys = swagger.definitions.get("ToysModel")?.properties?.get("toys") as Property
+        val toys = (swagger.definitions.get("ToysModel") as? ModelData)?.properties?.get("toys") as Property
 
         toys?.type.should.equal("array")
         val items = toys?.items as Property
