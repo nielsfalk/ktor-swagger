@@ -29,7 +29,8 @@ data class Metadata(
     inline fun <reified T> parameter(): Metadata = copy(parameter = T::class)
 }
 
-fun String.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata = Metadata(responses = mapOf(*pairs), summary = this)
+fun String.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata =
+    Metadata(responses = mapOf(*pairs), summary = this)
 
 fun responds(pair: Pair<HttpStatusCode, ResponseType>) = Metadata(responses = mapOf(pair))
 fun responses(vararg pairs: Pair<HttpStatusCode, ResponseType>) = Metadata(responses = mapOf(*pairs))
@@ -42,10 +43,14 @@ data class ResponseSchema(val name: String, val schema: Any) : ResponseType()
 inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(T::class)
 fun ok(name: String, schema: Any) = OK to ResponseSchema(name, schema)
 inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(T::class)
+fun create(name: String, schema: Any): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(name, schema)
 inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(Unit::class)
 
 @ContextDsl
-inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
+): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
     }
@@ -56,7 +61,10 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(metadata: M
 }
 
 @ContextDsl
-inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit): Route {
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
+): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
     }
@@ -66,7 +74,10 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(metadata: Me
 }
 
 @ContextDsl
-inline fun <reified LOCATION : Any> Route.get(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
+inline fun <reified LOCATION : Any> Route.get(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
+): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, Unit>(HttpMethod.Get)
     }
@@ -74,7 +85,10 @@ inline fun <reified LOCATION : Any> Route.get(metadata: Metadata, noinline body:
 }
 
 @ContextDsl
-inline fun <reified LOCATION : Any> Route.delete(metadata: Metadata, noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit): Route {
+inline fun <reified LOCATION : Any> Route.delete(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
+): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, Unit>(HttpMethod.Delete)
     }
