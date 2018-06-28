@@ -51,31 +51,43 @@ class SwaggerSupport(
         }
     }
 
-    inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
+    inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(
+        method: HttpMethod,
+        receiveType: ReceiveType = ReceiveFromReflection(ENTITY_TYPE::class)
+    ) {
         val clazz = LOCATION::class.java
         val location = clazz.getAnnotation(Location::class.java)
         val tags = clazz.getAnnotation(Group::class.java)
 
-        applyOperations(location, tags, method, LOCATION::class, ENTITY_TYPE::class)
+        applyOperations(location, tags, method, LOCATION::class, receiveType)
     }
 
-    fun <LOCATION : Any, BODY_TYPE : Any> Metadata.applyOperations(
+    fun <LOCATION : Any> Metadata.applyOperations(
         location: Location,
         group: Group?,
         method: HttpMethod,
         locationType: KClass<LOCATION>,
-        entityType: KClass<BODY_TYPE>
+        receiveType: ReceiveType
     ) {
 
+        when (receiveType) {
+            is ReceiveSchema -> addDefintion(receiveType.name, receiveType.schema)
+            is ReceiveFromReflection -> receiveType.kClass.let { entityType ->
+                if (entityType != Unit::class) {
+                    addDefinition(entityType)
+                }
+            }
+        }
+
         fun createOperation(): Operation {
-            val responses = responses.map { (status, type ) ->
+            val responses = responses.map { (status, type) ->
                 val response = when (type) {
                     is ResponseFromReflection -> {
                         addDefinition(type.kClass)
                         Response.create(status, type.kClass)
                     }
                     is ResponseSchema -> {
-                        swagger.definitions.putIfAbsent(type.name, type.schema)
+                        addDefintion(type.name, type.schema)
                         Response.create(type.name)
                     }
                 }
@@ -83,33 +95,35 @@ class SwaggerSupport(
                 status.value.toString() to response
             }.toMap()
 
-            if (entityType != Unit::class) {
-                addDefinition(entityType)
-            }
-
             val parameters = mutableListOf<Parameter>().apply {
-                if (entityType != Unit::class) {
-                    add(entityType.bodyParameter())
+                if ((receiveType as? ReceiveFromReflection)?.kClass != Unit::class) {
+                    add(receiveType.bodyParameter())
                 }
-                addAll(locationType.memberProperties.map { it.toParameter(location.path).let {
-                    addDefinitions(it.second)
-                    it.first
-                } })
-                parameter?.let {
-                    addAll(it.memberProperties.map { it.toParameter(location.path, ParameterInputType.query).let {
+                addAll(locationType.memberProperties.map {
+                    it.toParameter(location.path).let {
                         addDefinitions(it.second)
                         it.first
-                    } })
+                    }
+                })
+                parameter?.let {
+                    addAll(it.memberProperties.map {
+                        it.toParameter(location.path, ParameterInputType.query).let {
+                            addDefinitions(it.second)
+                            it.first
+                        }
+                    })
                 }
                 headers?.let {
-                    addAll(it.memberProperties.map { it.toParameter(location.path, ParameterInputType.header).let {
-                        addDefinitions(it.second)
-                        it.first
-                    } })
+                    addAll(it.memberProperties.map {
+                        it.toParameter(location.path, ParameterInputType.header).let {
+                            addDefinitions(it.second)
+                            it.first
+                        }
+                    })
                 }
             }
 
-            return Operation.create(this, responses, parameters, location, group, method, locationType, entityType)
+            return Operation.create(this, responses, parameters, location, group, method, locationType)
         }
 
         swagger.paths
@@ -118,6 +132,10 @@ class SwaggerSupport(
                 method.value.toLowerCase(),
                 createOperation()
             )
+    }
+
+    private fun addDefintion(name: String, schema: Any) {
+        swagger.definitions.putIfAbsent(name, schema)
     }
 
     private fun addDefinition(kClass: KClass<*>) {

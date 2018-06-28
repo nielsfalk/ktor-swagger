@@ -38,12 +38,17 @@ fun responses(vararg pairs: Pair<HttpStatusCode, ResponseType>) = Metadata(respo
 sealed class ResponseType
 
 data class ResponseFromReflection(val kClass: KClass<*>) : ResponseType()
-data class ResponseSchema(val name: String, val schema: Any) : ResponseType()
+data class ResponseSchema(val name: ModelName, val schema: Any) : ResponseType()
+
+sealed class ReceiveType
+
+data class ReceiveFromReflection(val kClass: KClass<*>) : ReceiveType()
+data class ReceiveSchema(val name: ModelName, val schema: Any) : ReceiveType()
 
 inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(T::class)
 fun ok(name: String, schema: Any) = OK to ResponseSchema(name, schema)
 inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(T::class)
-fun create(name: String, schema: Any): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(name, schema)
+fun created(name: String, schema: Any): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(name, schema)
 inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(Unit::class)
 
 @ContextDsl
@@ -61,12 +66,40 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
 }
 
 @ContextDsl
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
+    entitySchema: Any,
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
+): Route {
+    application.swagger.apply {
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Post, ReceiveSchema(name = ENTITY::class.modelName(), schema = entitySchema))
+    }
+    return post<LOCATION> {
+        body(this, it, call.receive())
+    }
+}
+
+@ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
     application.swagger.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
+    }
+    return put<LOCATION> {
+        body(this, it, call.receive())
+    }
+}
+
+@ContextDsl
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(
+    entitySchema: Any,
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
+): Route {
+    application.swagger.apply {
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Put, ReceiveSchema(name = ENTITY::class.modelName(), schema = entitySchema))
     }
     return put<LOCATION> {
         body(this, it, call.receive())

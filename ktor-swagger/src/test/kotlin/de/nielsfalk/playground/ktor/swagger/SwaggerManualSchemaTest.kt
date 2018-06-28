@@ -11,6 +11,7 @@ import io.ktor.server.testing.withTestApplication
 import org.junit.Test
 
 const val rectanglesLocation = "/toys"
+
 @Location(rectanglesLocation)
 class rectangles
 
@@ -27,6 +28,19 @@ val rectangleSchemaMap = mapOf(
         "a" to mapOf(ref to "#/definitions/size"),
         "b" to mapOf(ref to "#/definitions/size")
     )
+)
+
+val rectanglesSchemaMap = mapOf(
+    "type" to "array",
+    "items" to mapOf(
+        "description" to "Rectangles",
+        ref to "#/definitions/Rectangle"
+    )
+)
+
+data class Rectangle(
+    val a: Int,
+    val b: Int
 )
 
 class SwaggerManualSchemaTest {
@@ -51,6 +65,15 @@ class SwaggerManualSchemaTest {
             get<rectangles>("all".responds(ok("Rectangle", rectangleSchemaMap))) { }
         }
         swagger.definitions["size"].should.equal(sizeSchemaMap)
+        swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
+    }
+
+    @Test
+    fun `custom put schema`() {
+        applicationCustomRoute {
+            put<rectangles, Rectangle>(rectangleSchemaMap, "create".responds(created("Rectangles", rectanglesSchemaMap))) { _, rectange ->
+            }
+        }
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
     }
 }

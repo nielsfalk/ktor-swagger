@@ -77,8 +77,7 @@ class Operation(
             location: Location,
             group: Group?,
             method: HttpMethod,
-            locationType: KClass<*>,
-            entityType: KClass<*>
+            locationType: KClass<*>
         ): Operation {
             val tags = group?.toList()
             val summary = metadata.summary ?: "${method.value} ${location.path}"
@@ -110,13 +109,23 @@ fun <T, R> KProperty1<T, R>.toParameter(
     }
 }
 
-internal fun KClass<*>.bodyParameter() =
-    Parameter.create(
-        referenceProperty(),
-        name = "body",
-        description = modelName(),
-        `in` = body
-    )
+internal fun ReceiveType.bodyParameter() =
+    when (this) {
+        is ReceiveFromReflection ->
+            Parameter.create(
+                kClass.referenceProperty(),
+                name = "body",
+                description = kClass.modelName(),
+                `in` = body
+            )
+        is ReceiveSchema ->
+            Parameter.create(
+                referenceProperty(),
+                name = "body",
+                description = name,
+                `in` = body
+            )
+    }
 
 class Response(
     val description: String,
@@ -229,6 +238,13 @@ private fun KClass<*>.toModelProperty(returnType: KType? = null): Pair<Property,
             referenceProperty() to listOf(this)
         }
 
+private fun ReceiveSchema.referenceProperty(): Property =
+    Property(
+        `$ref` = "#/definitions/" + name,
+        description = name,
+        type = null
+    )
+
 private fun KClass<*>.referenceProperty(): Property =
     Property(
         `$ref` = "#/definitions/" + modelName(),
@@ -247,6 +263,7 @@ class Property(
 
 private val emptyKClassList = emptyList<KClass<*>>()
 
+@PublishedApi
 internal fun KClass<*>.modelName(): ModelName = simpleName ?: toString()
 
 annotation class Group(val name: String)
