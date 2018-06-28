@@ -63,17 +63,33 @@ class Contact(
 )
 
 class Operation(
-    metadata: Metadata,
     val responses: Map<HttpStatus, Response>,
     val parameters: List<Parameter>,
-    location: Location,
-    group: Group?,
-    method: HttpMethod,
-    locationType: KClass<*>,
-    entityType: KClass<*>
+    val tags: List<Tag>?,
+    val summary: String
 ) {
-    val tags = group?.toList()
-    val summary = metadata.summary ?: "${method.value} ${location.path}"
+
+    companion object {
+        fun create(
+            metadata: Metadata,
+            responses: Map<HttpStatus, Response>,
+            parameters: List<Parameter>,
+            location: Location,
+            group: Group?,
+            method: HttpMethod,
+            locationType: KClass<*>,
+            entityType: KClass<*>
+        ): Operation {
+            val tags = group?.toList()
+            val summary = metadata.summary ?: "${method.value} ${location.path}"
+            return Operation(
+                responses,
+                parameters,
+                tags,
+                summary
+            )
+        }
+    }
 }
 
 private fun Group.toList(): List<Tag> {
@@ -85,7 +101,7 @@ fun <T, R> KProperty1<T, R>.toParameter(
     inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query
 ): Pair<Parameter, Collection<KClass<*>>> {
     return toModelProperty().let {
-        Parameter(
+        Parameter.create(
             it.first,
             name,
             inputType,
@@ -95,16 +111,26 @@ fun <T, R> KProperty1<T, R>.toParameter(
 }
 
 internal fun KClass<*>.bodyParameter() =
-    Parameter(
+    Parameter.create(
         referenceProperty(),
         name = "body",
         description = modelName(),
         `in` = body
     )
 
-class Response(httpStatusCode: HttpStatusCode, kClass: KClass<*>) {
-    val description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription()
-    val schema = if (kClass == Unit::class) null else ModelReference("#/definitions/" + kClass.modelName())
+class Response(
+    val description: String,
+    val schema: ModelReference?
+) {
+
+    companion object {
+        fun create(httpStatusCode: HttpStatusCode, kClass: KClass<*>): Response {
+            return Response(
+                description = if (kClass == Unit::class) httpStatusCode.description else kClass.responseDescription(),
+                schema = if (kClass == Unit::class) null else ModelReference("#/definitions/" + kClass.modelName())
+            )
+        }
+    }
 }
 
 fun KClass<*>.responseDescription(): String = modelName()
@@ -112,17 +138,38 @@ fun KClass<*>.responseDescription(): String = modelName()
 class ModelReference(val `$ref`: String)
 
 class Parameter(
-    property: de.nielsfalk.playground.ktor.swagger.Property,
     val name: String,
     val `in`: ParameterInputType,
-    val description: String = property.description ?: name,
-    val required: Boolean = true,
-    val type: String? = property.type,
-    val format: String? = property.format,
-    val enum: List<String>? = property.enum,
-    val items: Property? = property.items,
-    val schema: ModelReference? = property.`$ref`?.let { ModelReference(it) }
-)
+    val description: String,
+    val required: Boolean,
+    val type: String? = null,
+    val format: String? = null,
+    val enum: List<String>? = null,
+    val items: Property? = null,
+    val schema: ModelReference? = null
+) {
+    companion object {
+        fun create(
+            property: de.nielsfalk.playground.ktor.swagger.Property,
+            name: String,
+            `in`: ParameterInputType,
+            description: String = property.description ?: name,
+            required: Boolean = true
+        ): Parameter {
+            return Parameter(
+                name = name,
+                `in` = `in`,
+                description = description,
+                required = required,
+                type = property.type,
+                format = property.format,
+                enum = property.enum,
+                items = property.items,
+                schema = property.`$ref`?.let { ModelReference(it) }
+            )
+        }
+    }
+}
 
 enum class ParameterInputType {
     query, path, body, header
@@ -176,7 +223,7 @@ private fun KClass<*>.referenceProperty(): Property =
         type = null
     )
 
-open class Property(
+class Property(
     val type: String?,
     val format: String? = null,
     val enum: List<String>? = null,

@@ -70,7 +70,7 @@ class SwaggerSupport(
         fun createOperation(): Operation {
             val responses = responses.map { (status, kClass) ->
                 addDefinition(kClass)
-                status.value.toString() to Response(status, kClass)
+                status.value.toString() to Response.create(status, kClass)
             }.toMap()
 
             if (entityType != Unit::class) {
@@ -99,7 +99,7 @@ class SwaggerSupport(
                 }
             }
 
-            return Operation(this, responses, parameters, location, group, method, locationType, entityType)
+            return Operation.create(this, responses, parameters, location, group, method, locationType, entityType)
         }
 
         swagger.paths
