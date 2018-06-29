@@ -71,9 +71,18 @@ class SwaggerManualSchemaTest {
     @Test
     fun `custom put schema`() {
         applicationCustomRoute {
-            put<rectangles, Rectangle>(rectangleSchemaMap, "create".responds(created("Rectangles", rectanglesSchemaMap))) { _, rectange ->
+            put<rectangles, Rectangle>(rectangleSchemaMap, "create".responds(created("Rectangles", rectanglesSchemaMap))) { _, _ ->
             }
         }
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
+        swagger.definitions["Rectangles"].should.equal(rectanglesSchemaMap)
+        swagger.paths[rectanglesLocation]?.get("put").apply {
+            should.not.be.`null`
+        }?.also { operation ->
+            operation.summary.should.equal("create")
+            operation.parameters.find { it.`in` == ParameterInputType.body }?.schema?.`$ref`.should.equal("#/definitions/Rectangle")
+            operation.responses.keys.should.contain("201")
+            operation.responses["201"]?.schema?.`$ref`.should.equal("#/definitions/Rectangles")
+        }
     }
 }
