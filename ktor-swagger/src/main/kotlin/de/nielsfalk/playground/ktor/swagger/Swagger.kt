@@ -19,9 +19,11 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Date
 import kotlin.reflect.KClass
+import kotlin.reflect.KClassifier
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 
 typealias ModelName = String
@@ -244,23 +246,33 @@ private fun KType.parameterize(reifiedType: Type?): ParameterizedType? =
         TypeUtils.parameterize((classifier as KClass<*>).java, *it.actualTypeArguments)
     }
 
-private val collectionTypes = setOf("class kotlin.collections.List", "class kotlin.collections.Set")
+private val KClass<*>?.isCollectionType
+    get() = this?.isSubclassOf(Collection::class) ?: false
+
+private val KClassifier?.isCollectionType
+    get() = (this as? KClass<*>).isCollectionType
 
 /**
  * @param returnType The return type of this [KClass] (used for generics like `List<String>` or List<T>`.
  * @param reifiedType The reified generic type captured. Used for looking up types by their generic name like `T`.
  */
-private fun KClass<*>.toModelProperty(returnType: KType? = null, reifiedType: Type? = null): Pair<Property, Collection<TypeInfo>> =
+private fun KClass<*>.toModelProperty(
+    returnType: KType? = null,
+    reifiedType: Type? = null
+): Pair<Property, Collection<TypeInfo>> =
     propertyTypes[qualifiedName?.removeSuffix("?")]
-        ?: if (returnType != null && collectionTypes.contains(toString())) {
+        ?: if (returnType != null && isCollectionType) {
             val returnArgumentType = returnType.arguments.first().type
             val classifier = returnArgumentType?.classifier
-            if (collectionTypes.contains(classifier.toString())) {
+            if (classifier.isCollectionType) {
                 /*
                  * Handle the case of nested collection types.
                  */
                 val kClass = classifier as KClass<*>
-                val items = kClass.toModelProperty(returnType = returnArgumentType, reifiedType = returnArgumentType.parameterize(reifiedType))
+                val items = kClass.toModelProperty(
+                    returnType = returnArgumentType,
+                    reifiedType = returnArgumentType.parameterize(reifiedType)
+                )
                 Property(items = items.first, type = "array") to items.second
             } else {
                 /*
