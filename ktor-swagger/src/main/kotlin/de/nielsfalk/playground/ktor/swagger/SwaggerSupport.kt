@@ -4,6 +4,8 @@ import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationFeature
 import io.ktor.application.call
+import io.ktor.client.call.TypeInfo
+import io.ktor.client.call.typeInfo
 import io.ktor.http.HttpMethod
 import io.ktor.locations.Location
 import io.ktor.pipeline.PipelineContext
@@ -53,7 +55,7 @@ class SwaggerSupport(
 
     inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(
         method: HttpMethod,
-        receiveType: ReceiveType = ReceiveFromReflection(ENTITY_TYPE::class)
+        receiveType: ReceiveType = ReceiveFromReflection(typeInfo<ENTITY_TYPE>())
     ) {
         val clazz = LOCATION::class.java
         val location = clazz.getAnnotation(Location::class.java)
@@ -72,9 +74,9 @@ class SwaggerSupport(
 
         when (receiveType) {
             is ReceiveSchema -> addDefintion(receiveType.name, receiveType.schema)
-            is ReceiveFromReflection -> receiveType.kClass.let { entityType ->
-                if (entityType != Unit::class) {
-                    addDefinition(entityType)
+            is ReceiveFromReflection -> receiveType.typeInfo.let { typeInfo ->
+                if (typeInfo.type != Unit::class) {
+                    addDefinition(typeInfo)
                 }
             }
         }
@@ -83,8 +85,8 @@ class SwaggerSupport(
             val responses = responses.map { (status, type) ->
                 val response = when (type) {
                     is ResponseFromReflection -> {
-                        addDefinition(type.kClass)
-                        Response.create(status, type.kClass)
+                        addDefinition(type.type)
+                        Response.create(status, type.type)
                     }
                     is ResponseSchema -> {
                         addDefintion(type.name, type.schema)
@@ -96,7 +98,7 @@ class SwaggerSupport(
             }.toMap()
 
             val parameters = mutableListOf<Parameter>().apply {
-                if ((receiveType as? ReceiveFromReflection)?.kClass != Unit::class) {
+                if ((receiveType as? ReceiveFromReflection)?.typeInfo?.type != Unit::class) {
                     add(receiveType.bodyParameter())
                 }
                 addAll(locationType.memberProperties.map {
@@ -138,11 +140,11 @@ class SwaggerSupport(
         swagger.definitions.putIfAbsent(name, schema)
     }
 
-    private fun addDefinition(kClass: KClass<*>) {
-        if (kClass != Unit::class) {
-            val accruedNewDefinitions = mutableListOf<KClass<*>>()
-            swagger.definitions.computeIfAbsent(kClass.modelName()) {
-                val modelWithAdditionalDefinitions = createModelData(kClass)
+    private fun addDefinition(typeInfo: TypeInfo) {
+        if (typeInfo.type != Unit::class) {
+            val accruedNewDefinitions = mutableListOf<TypeInfo>()
+            swagger.definitions.computeIfAbsent(typeInfo.modelName()) {
+                val modelWithAdditionalDefinitions = createModelData(typeInfo)
                 accruedNewDefinitions.addAll(modelWithAdditionalDefinitions.second)
                 modelWithAdditionalDefinitions.first
             }
@@ -151,7 +153,10 @@ class SwaggerSupport(
         }
     }
 
-    private fun addDefinitions(kClasses: Collection<KClass<*>>) = kClasses.forEach { addDefinition(it) }
+    private fun addDefinitions(kClasses: Collection<TypeInfo>) =
+        kClasses.forEach {
+            addDefinition(it)
+        }
 }
 
 data class SwaggerUiConfiguration(

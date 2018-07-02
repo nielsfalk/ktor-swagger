@@ -39,7 +39,7 @@ allprojects {
 }
 
 fun DependencyHandler.ktor(name: String) =
-    create(group = "io.ktor", name = name, version = "0.9.2")
+    create(group = "io.ktor", name = name, version = "0.9.3")
 
 subprojects {
     apply {
