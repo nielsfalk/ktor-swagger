@@ -82,6 +82,11 @@ task("stage") {
     dependsOn(":ktor-sample-swagger:installDist")
 }
 
+task<Wrapper>("wrapper") {
+    gradleVersion = "4.8"
+    distributionType = Wrapper.DistributionType.ALL
+}
+
 /**
  * Configures the [kotlin][org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension] project extension.
  */
