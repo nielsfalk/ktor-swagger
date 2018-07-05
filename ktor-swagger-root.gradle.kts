@@ -73,6 +73,16 @@ subprojects {
 }
 
 /**
+ * Heroku will invoke this task if it is present.
+ * https://devcenter.heroku.com/articles/deploying-gradle-apps-on-heroku#verify-that-your-build-file-is-set-up-correctly
+ */
+task("stage") {
+    description = "Task executed by heroku to build this gradle project for deployment."
+    group = "heroku"
+    dependsOn(":ktor-sample-swagger:installDist")
+}
+
+/**
  * Configures the [kotlin][org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension] project extension.
  */
 fun Project.`kotlin`(configure: org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension.() -> Unit): Unit =

@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -Dserver.port=$PORT -jar ktor-sample-swagger/target/ktor-sample-swagger.jar
+web: ./ktor-sample-swagger/build/install/ktor-sample-swagger/bin/ktor-sample-swagger --port=$PORT

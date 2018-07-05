@@ -1,5 +1,9 @@
 package de.nielsfalk.playground.ktor.swagger
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
@@ -20,7 +24,6 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.StringValues
 import io.ktor.util.toMap
-import java.lang.Integer.getInteger
 
 data class PetModel(val id: Int?, val name: String)
 
@@ -70,8 +73,9 @@ class withQueryParameter
 
 class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
-fun main(args: Array<String>) {
-    val server = embeddedServer(Netty, getInteger("server.port", 8080)) {
+private fun run(port: Int) {
+    println("Launching on port `$port`")
+    val server = embeddedServer(Netty, port) {
         install(DefaultHeaders)
         install(Compression)
         install(CallLogging)
@@ -167,3 +171,23 @@ private fun Map<String, StringValues>.format() =
     }
         .map { (key, value) -> "$key:\n$value" }
         .joinToString(separator = "\n\n")
+
+/**
+ * Launches the application and handles the args passed to [main].
+ */
+class Launcher : CliktCommand(
+    name = "ktor-sample-swagger"
+) {
+    companion object {
+        private const val defaultPort = 8080
+    }
+    private val port: Int by option("-p", "--port", help = "The port that this server should be started on. Defaults to $defaultPort.")
+        .int()
+        .default(defaultPort)
+
+    override fun run() {
+        run(port)
+    }
+}
+
+fun main(args: Array<String>) = Launcher().main(args)
