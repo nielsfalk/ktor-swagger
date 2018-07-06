@@ -208,9 +208,9 @@ enum class ParameterInputType {
  * Holds the [ModelData] that was created from a given [TypeInfo] along with any
  * additional [TypeInfo] that were encountered and must be converted to [ModelData].
  */
-typealias ModelDataWithDiscovereredTypeInfo = Pair<ModelData, Collection<TypeInfo>>
+typealias ModelDataWithDiscoveredTypeInfo = Pair<ModelData, Collection<TypeInfo>>
 
-fun createModelData(typeInfo: TypeInfo): ModelDataWithDiscovereredTypeInfo {
+fun createModelData(typeInfo: TypeInfo): ModelDataWithDiscoveredTypeInfo {
     val collectedClassesToRegister = mutableListOf<TypeInfo>()
     val modelProperties =
         typeInfo.type.memberProperties.map {
@@ -236,7 +236,7 @@ private val propertyTypes = mapOf(
 
 fun <T, R> KProperty1<T, R>.toModelProperty(reifiedType: Type? = null): Pair<Property, Collection<TypeInfo>> =
     (returnType.classifier as KClass<*>)
-        .toModelProperty(returnType, reifiedType)
+        .toModelProperty(returnType, returnType.parameterize(reifiedType))
 
 internal fun <T, R> KProperty1<T, R>.returnTypeInfo(reifiedType: Type?): TypeInfo =
     TypeInfo(returnType.classifier as KClass<*>, returnType.parameterize(reifiedType)!!)
@@ -253,20 +253,21 @@ private val KClassifier?.isCollectionType
     get() = (this as? KClass<*>).isCollectionType
 
 /**
- * @param returnType The return type of this [KClass] (used for generics like `List<String>` or List<T>`.
+ * @param returnType The return type of this [KClass] (used for generics like `List<String>` or List<T>`).
  * @param reifiedType The reified generic type captured. Used for looking up types by their generic name like `T`.
  */
 private fun KClass<*>.toModelProperty(
     returnType: KType? = null,
-    reifiedType: Type? = null
-): Pair<Property, Collection<TypeInfo>> =
-    propertyTypes[qualifiedName?.removeSuffix("?")]
+    reifiedType: ParameterizedType? = null
+): Pair<Property, Collection<TypeInfo>> {
+    return propertyTypes[qualifiedName?.removeSuffix("?")]
         ?: if (returnType != null && isCollectionType) {
             val returnArgumentType = returnType.arguments.first().type
             val classifier = returnArgumentType?.classifier
             if (classifier.isCollectionType) {
                 /*
                  * Handle the case of nested collection types.
+                 * For example: List<List<String>>
                  */
                 val kClass = classifier as KClass<*>
                 val items = kClass.toModelProperty(
@@ -277,18 +278,43 @@ private fun KClass<*>.toModelProperty(
             } else {
                 /*
                  * Handle the case of a collection that holds the type directly.
+                 * For example: List<String> or List<T>
                  */
-                val kClass = when (classifier) {
-                    is KClass<*> -> classifier
+                val items = when (classifier) {
+                    is KClass<*> -> {
+                        /*
+                         * The type is explicit.
+                         * For example: List<String>.
+                         * classifier would be String::class.
+                         */
+                        classifier.toModelProperty()
+                    }
                     is KTypeParameter -> {
                         /*
                          * The case that we need to figure out what the reified generic type is.
+                         * For example: List<T>
+                         * Need to figure out what the next level generic type would be.
                          */
-                        ((reifiedType as ParameterizedType).actualTypeArguments.first() as Class<*>).kotlin
+                        val nextParameterizedType = reifiedType?.actualTypeArguments?.first()
+                        when (nextParameterizedType) {
+                            is Class<*> -> {
+                                /*
+                                 * The type the collection is holding type is encoded in the reified type information.
+                                 */
+                                nextParameterizedType.kotlin.toModelProperty()
+                            }
+                            is ParameterizedType -> {
+                                /*
+                                 * The type the collection is holding is generic.
+                                 */
+                                val kClass = (nextParameterizedType.rawType as Class<*>).kotlin
+                                kClass.toModelProperty(reifiedType = nextParameterizedType)
+                            }
+                            else -> throw IllegalStateException("Unknown type ${nextParameterizedType?.let { it::class } ?: "null"} $nextParameterizedType")
+                        }
                     }
-                    else -> throw IllegalStateException("Unknown type $classifier")
+                    else -> throw IllegalStateException("Unknown type ${classifier?.let { it::class } ?: "null"} $classifier")
                 }
-                val items = kClass.toModelProperty(reifiedType = reifiedType)
                 Property(items = items.first, type = "array") to items.second
             }
         } else if (java.isEnum) {
@@ -296,16 +322,12 @@ private fun KClass<*>.toModelProperty(
             Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string") to emptyTypeInfoList
         } else {
             val typeInfo = when (reifiedType) {
-                is ParameterizedType ->
-                    if (returnType != null) {
-                        TypeInfo(this, returnType.parameterize(reifiedType)!!)
-                    } else {
-                        TypeInfo(this, reifiedType.actualTypeArguments?.first()!!)
-                    }
+                is ParameterizedType -> TypeInfo(this, reifiedType)
                 else -> TypeInfo(this, this.java)
             }
             typeInfo.referenceProperty() to listOf(typeInfo)
         }
+}
 
 private fun ReceiveSchema.referenceProperty(): Property =
     Property(
