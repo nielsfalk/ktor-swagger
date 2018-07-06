@@ -207,6 +207,29 @@ class ModelExtractionTest {
     }
 
     @Test
+    fun `generic type information extraction at top level`() {
+        val typeInfo = typeInfo<GenericSubModel<String>>()
+
+        val property = GenericSubModel::class.memberProperties.first()
+
+        val typeInfoForProperty = typeInfo<String>()
+        assertEqualTypeInfo(typeInfoForProperty, property.returnTypeInfo(typeInfo.reifiedType))
+    }
+
+    @Test
+    fun `when value in GenericSubModel is collection type, value is correct type`() {
+        val typeInfo = typeInfo<GenericSubModel<List<String>>>()
+
+        val modelWithDiscovered = createModelData(typeInfo)
+
+        val property = modelWithDiscovered.first.properties["value"]!!
+        property.type.should.equal("array")
+        property.items?.type.should.equal("string")
+
+        modelWithDiscovered.second.should.be.empty
+    }
+
+    @Test
     fun `extract generic sub-model element`() {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelWithNestedGeneric<String>>())
@@ -241,6 +264,20 @@ class ModelExtractionTest {
 
         map.find { it.name == "optional" }!!.required.should.equal(false)
         map.find { it.name == "mandatory" }!!.required.should.equal(true)
+    }
+
+    class TwoGenerics<J, K>(val jValue: J, val kValue: K)
+
+    @Test
+    fun `two generics passed to object`() {
+        val typeInfo = typeInfo<TwoGenerics<Int, String>>()
+
+        val properties = TwoGenerics::class.memberProperties
+        val jValueType = properties.find { it.name == "jValue" }!!.returnTypeInfo(typeInfo.reifiedType)
+        val kValueType = properties.find { it.name == "kValue" }!!.returnTypeInfo(typeInfo.reifiedType)
+
+        assertEqualTypeInfo(typeInfo<Int>(), jValueType)
+        assertEqualTypeInfo(typeInfo<String>(), kValueType)
     }
 }
 

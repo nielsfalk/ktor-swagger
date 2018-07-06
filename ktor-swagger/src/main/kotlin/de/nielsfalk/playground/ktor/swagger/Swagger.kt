@@ -14,6 +14,7 @@ import io.ktor.locations.Location
 import org.apache.commons.lang3.reflect.TypeUtils
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -235,11 +236,38 @@ private val propertyTypes = mapOf(
 ).mapKeys { it.key.qualifiedName }.mapValues { it.value to emptyList<TypeInfo>() }
 
 fun <T, R> KProperty1<T, R>.toModelProperty(reifiedType: Type? = null): Pair<Property, Collection<TypeInfo>> =
-    (returnType.classifier as KClass<*>)
-        .toModelProperty(returnType, returnType.parameterize(reifiedType))
+    returnType.toModelProperty(reifiedType)
+
+fun KType.toModelProperty(reifiedType: Type?): Pair<Property, Collection<TypeInfo>> =
+    resolveTypeInfo(reifiedType).let { typeInfo ->
+        val type = typeInfo?.type ?: classifier as KClass<*>
+        type.toModelProperty(this, typeInfo?.reifiedType as? ParameterizedType)
+    }
 
 internal fun <T, R> KProperty1<T, R>.returnTypeInfo(reifiedType: Type?): TypeInfo =
-    TypeInfo(returnType.classifier as KClass<*>, returnType.parameterize(reifiedType)!!)
+    returnType.resolveTypeInfo(reifiedType)!!
+
+internal fun KType.resolveTypeInfo(reifiedType: Type?): TypeInfo? {
+    val classifierLocal = classifier
+    return when (classifierLocal) {
+        is KTypeParameter -> {
+            val typeNameToLookup = classifierLocal.name
+            val reifiedClass = (reifiedType as ParameterizedType).typeForName(typeNameToLookup)
+            val kotlinType = reifiedClass.rawKotlinKClass()
+            return TypeInfo(kotlinType, reifiedClass)
+        }
+        is KClass<*> -> {
+            this.parameterize(reifiedType)?.let { TypeInfo(classifierLocal, it) }
+        }
+        else -> unsuportedType(classifierLocal)
+    }
+}
+
+internal fun Type.rawKotlinKClass() = when (this) {
+    is Class<*> -> this.kotlin
+    is ParameterizedType -> (this.rawType as Class<*>).kotlin
+    else -> unsuportedType(this)
+}
 
 private fun KType.parameterize(reifiedType: Type?): ParameterizedType? =
     (reifiedType as? ParameterizedType)?.let {
@@ -262,7 +290,14 @@ private fun KClass<*>.toModelProperty(
 ): Pair<Property, Collection<TypeInfo>> {
     return propertyTypes[qualifiedName?.removeSuffix("?")]
         ?: if (returnType != null && isCollectionType) {
-            val returnArgumentType = returnType.arguments.first().type
+            val returnTypeClassifier = returnType.classifier
+            val returnArgumentType: KType? = when (returnTypeClassifier) {
+                is KClass<*> -> returnType.arguments.first().type
+                is KTypeParameter -> {
+                    reifiedType!!.actualTypeArguments.first().toKType()
+                }
+                else -> unsuportedType(returnTypeClassifier)
+            }
             val classifier = returnArgumentType?.classifier
             if (classifier.isCollectionType) {
                 /*
@@ -310,10 +345,10 @@ private fun KClass<*>.toModelProperty(
                                 val kClass = (nextParameterizedType.rawType as Class<*>).kotlin
                                 kClass.toModelProperty(reifiedType = nextParameterizedType)
                             }
-                            else -> throw IllegalStateException("Unknown type ${nextParameterizedType?.let { it::class } ?: "null"} $nextParameterizedType")
+                            else -> unsuportedType(nextParameterizedType)
                         }
                     }
-                    else -> throw IllegalStateException("Unknown type ${classifier?.let { it::class } ?: "null"} $classifier")
+                    else -> unsuportedType(classifier)
                 }
                 Property(items = items.first, type = "array") to items.second
             }
@@ -363,27 +398,37 @@ internal fun TypeInfo.modelName(): ModelName {
     } else {
         fun ParameterizedType.modelName(): String =
             actualTypeArguments
-                .map { when (it) {
-                    is Class<*> -> {
-                        /*
-                         * The type isn't parameterized.
-                         */
-                        it.kotlin.modelName()
+                .map {
+                    when (it) {
+                        is Class<*> -> {
+                            /*
+                             * The type isn't parameterized.
+                             */
+                            it.kotlin.modelName()
+                        }
+                        is ParameterizedType -> {
+                            /*
+                             * The type is parameterized, create a TypeInfo for it and recurse to get the
+                             * model name again.
+                             */
+                            TypeInfo((it.rawType as Class<*>).kotlin, it).modelName()
+                        }
+                        is WildcardType -> {
+                            (it.upperBounds.first() as Class<*>).kotlin.modelName()
+                        }
+                        else -> unsuportedType(it)
                     }
-                    is ParameterizedType -> {
-                        /*
-                         * The type is parameterized, create a TypeInfo for it and recurse to get the
-                         * model name again.
-                         */
-                        TypeInfo((it.rawType as Class<*>).kotlin, it).modelName()
-                    }
-                    else -> throw IllegalArgumentException("Unsupported type ${it::class} $it")
-                } }
+                }
                 .joinToString(separator = "And") { it }
+
         val genericsName = (reifiedType as ParameterizedType)
             .modelName()
         "${type.modelName()}Of$genericsName"
     }
+}
+
+private inline fun unsuportedType(type: Any?): Nothing {
+    throw IllegalStateException("Unknown type ${type?.let { it::class }} $type")
 }
 
 annotation class Group(val name: String)
