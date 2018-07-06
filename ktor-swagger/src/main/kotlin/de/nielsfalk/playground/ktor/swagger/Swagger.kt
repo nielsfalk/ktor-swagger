@@ -361,11 +361,27 @@ internal fun TypeInfo.modelName(): ModelName {
     return if (type.java == reifiedType) {
         type.modelName()
     } else {
-        val genericsName =
-            (reifiedType as ParameterizedType)
-                .actualTypeArguments
-                .map { it as Class<*> }
-                .joinToString(separator = "And") { it.simpleName }
+        fun ParameterizedType.modelName(): String =
+            actualTypeArguments
+                .map { when (it) {
+                    is Class<*> -> {
+                        /*
+                         * The type isn't parameterized.
+                         */
+                        it.kotlin.modelName()
+                    }
+                    is ParameterizedType -> {
+                        /*
+                         * The type is parameterized, create a TypeInfo for it and recurse to get the
+                         * model name again.
+                         */
+                        TypeInfo((it.rawType as Class<*>).kotlin, it).modelName()
+                    }
+                    else -> throw IllegalArgumentException("Unsupported type ${it::class} $it")
+                } }
+                .joinToString(separator = "And") { it }
+        val genericsName = (reifiedType as ParameterizedType)
+            .modelName()
         "${type.modelName()}Of$genericsName"
     }
 }

@@ -155,6 +155,28 @@ class ModelExtractionTest {
         assertEqualTypeInfo(typeInfo<SubModelElement>(), modelWithDiscovered.second.first())
     }
 
+    @Test
+    fun `name of triply nested generic type`() {
+        val tripleNestedTypeInfo =
+            typeInfo<ModelNestedGenericList<ModelNestedGenericList<ModelNestedGenericList<SubModelElement>>>>()
+        tripleNestedTypeInfo.modelName().should.equal("ModelNestedGenericListOfModelNestedGenericListOfModelNestedGenericListOfSubModelElement")
+    }
+
+    @Test
+    fun `triply nested generic list type`() {
+        val tripleNestedTypeInfo =
+            typeInfo<ModelNestedGenericList<ModelNestedGenericList<ModelNestedGenericList<SubModelElement>>>>()
+        val modelWithDiscovered = createModelData(tripleNestedTypeInfo)
+
+        val expectedType = typeInfo<ModelNestedGenericList<ModelNestedGenericList<SubModelElement>>>()
+        assertEqualTypeInfo(expectedType, modelWithDiscovered.second.first())
+
+        val property = modelWithDiscovered.first.properties["somethingNested"]!!
+        property.type.should.equal("array")
+        property.items?.type.should.equal("array")
+        property.items?.items?.`$ref`.should.equal("#/definitions/ModelNestedGenericListOfModelNestedGenericListOfSubModelElement")
+    }
+
     class ModelNestedList(val somethingNested: List<List<SubModelElement>>)
 
     @Test
@@ -208,7 +230,7 @@ class ModelExtractionTest {
             createModelData(typeInfo<ModelWithTwoNestedGeneric<String, Int>>())
         assertEqualTypeInfo(typeInfo<GenericSubModelTwoGenerics<String, Int>>(), modelWithDiscovered.second.first())
         val property = modelWithDiscovered.first.properties["subModelElement"]!!
-        property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInteger")
+        property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInt")
     }
 
     class Parameters(val optional: String?, val mandatory: String)
