@@ -122,6 +122,16 @@ val jacocoRootReport = task<JacocoReport>("jacocoRootReport") {
     }
 }
 
+allprojects {
+    // Configures the Jacoco tool version to be the same for all projects that have it applied.
+    pluginManager.withPlugin("jacoco") {
+        // If this project has the plugin applied, configure the tool version.
+        jacoco {
+            toolVersion = "0.8.1"
+        }
+    }
+}
+
 
 /**
  * Heroku will invoke this task if it is present.
