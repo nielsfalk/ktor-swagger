@@ -11,7 +11,6 @@ import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Location
-import org.apache.commons.lang3.reflect.TypeUtils
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
@@ -271,7 +270,7 @@ internal fun Type.rawKotlinKClass() = when (this) {
 
 private fun KType.parameterize(reifiedType: Type?): ParameterizedType? =
     (reifiedType as? ParameterizedType)?.let {
-        TypeUtils.parameterize((classifier as KClass<*>).java, *it.actualTypeArguments)
+        parameterize((classifier as KClass<*>).java, *it.actualTypeArguments)
     }
 
 private val KClass<*>?.isCollectionType
