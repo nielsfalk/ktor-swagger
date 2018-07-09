@@ -15,6 +15,7 @@ buildscript {
 plugins {
     // https://github.com/diffplug/spotless/tree/master/plugin-gradle
     id("com.diffplug.gradle.spotless") version "3.10.0"
+    jacoco
 }
 
 object Versions {
@@ -45,6 +46,7 @@ subprojects {
     apply {
         plugin("kotlin")
         plugin("java-library")
+        plugin("jacoco")
     }
 
     dependencies {
@@ -70,7 +72,56 @@ subprojects {
             endWithNewline()
         }
     }
+
+    tasks.withType<Test> {
+        extensions.configure(typeOf<JacocoTaskExtension>()) {
+            /*
+             * Fix for Jacoco breaking Build Cache support.
+             * https://github.com/gradle/gradle/issues/5269
+             */
+            isAppend = false
+        }
+    }
+
+    tasks.withType<JacocoReport> {
+        reports {
+            html.isEnabled = true
+            xml.isEnabled = true
+            csv.isEnabled = false
+        }
+    }
 }
+
+val jacocoRootReport = task<JacocoReport>("jacocoRootReport") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Generates code coverage report for all sub-projects."
+
+    val jacocoReportTasks =
+        subprojects.map { it.tasks["jacocoTestReport"] as JacocoReport }
+    dependsOn(jacocoReportTasks)
+
+    val allExecutionData = jacocoReportTasks.map { it.executionData }
+    executionData(*allExecutionData.toTypedArray())
+
+    // Pre-initialize these to empty collections to prevent NPE on += call below.
+    additionalSourceDirs = files()
+    sourceDirectories = files()
+    classDirectories = files()
+
+    subprojects.forEach { testedProject ->
+        val sourceSets = testedProject.java.sourceSets
+        this@task.additionalSourceDirs = this@task.additionalSourceDirs?.plus(files(sourceSets["main"].allSource.srcDirs))
+        this@task.sourceDirectories += files(sourceSets["main"].allSource.srcDirs)
+        this@task.classDirectories += files(sourceSets["main"].output)
+    }
+
+    reports {
+        html.isEnabled = true
+        xml.isEnabled = true
+        csv.isEnabled = false
+    }
+}
+
 
 /**
  * Heroku will invoke this task if it is present.
@@ -92,3 +143,9 @@ task<Wrapper>("wrapper") {
  */
 fun Project.`kotlin`(configure: org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension.() -> Unit): Unit =
     extensions.configure("kotlin", configure)
+
+/**
+ * Retrieves the [java][org.gradle.api.plugins.JavaPluginConvention] project convention.
+ */
+val Project.`java`: org.gradle.api.plugins.JavaPluginConvention
+    get() = convention.getPluginByName("java")

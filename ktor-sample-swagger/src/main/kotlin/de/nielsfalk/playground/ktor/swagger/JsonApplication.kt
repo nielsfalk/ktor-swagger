@@ -20,6 +20,7 @@ import io.ktor.pipeline.PipelineContext
 import io.ktor.response.respond
 import io.ktor.response.respondText
 import io.ktor.routing.routing
+import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.StringValues
@@ -73,7 +74,7 @@ class withQueryParameter
 
 class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
-private fun run(port: Int) {
+internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
     println("Launching on port `$port`")
     val server = embeddedServer(Netty, port) {
         install(DefaultHeaders)
@@ -148,7 +149,7 @@ private fun run(port: Int) {
             )
         }
     }
-    server.start(wait = true)
+    return server.start(wait = wait)
 }
 
 fun respondRequestDetails(): suspend PipelineContext<Unit, ApplicationCall>.(Any) -> Unit {
