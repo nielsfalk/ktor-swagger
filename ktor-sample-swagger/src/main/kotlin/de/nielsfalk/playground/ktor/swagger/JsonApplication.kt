@@ -1,91 +1,117 @@
 package de.nielsfalk.playground.ktor.swagger
 
-import org.jetbrains.ktor.application.install
-import org.jetbrains.ktor.features.CallLogging
-import org.jetbrains.ktor.features.Compression
-import org.jetbrains.ktor.features.DefaultHeaders
-import org.jetbrains.ktor.gson.GsonSupport
-import org.jetbrains.ktor.host.embeddedServer
-import org.jetbrains.ktor.locations.Locations
-import org.jetbrains.ktor.locations.location
-import org.jetbrains.ktor.netty.Netty
-import org.jetbrains.ktor.pipeline.PipelineContext
-import org.jetbrains.ktor.response.respond
-import org.jetbrains.ktor.routing.routing
-import org.jetbrains.ktor.util.ValuesMap
-import org.jetbrains.ktor.util.toMap
-import java.lang.Integer.getInteger
-
-/**
- * @author Niels Falk
- */
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
+import io.ktor.application.ApplicationCall
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.features.CallLogging
+import io.ktor.features.Compression
+import io.ktor.features.ContentNegotiation
+import io.ktor.features.DefaultHeaders
+import io.ktor.gson.gson
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode.Companion.Created
+import io.ktor.locations.Location
+import io.ktor.locations.Locations
+import io.ktor.pipeline.PipelineContext
+import io.ktor.response.respond
+import io.ktor.response.respondText
+import io.ktor.routing.routing
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.util.StringValues
+import io.ktor.util.toMap
 
 data class PetModel(val id: Int?, val name: String)
 
 data class PetsModel(val pets: MutableList<PetModel>)
 
+val sizeSchemaMap = mapOf(
+    "type" to "number",
+    "minimum" to 0
+)
+
+val rectangleSchemaMap = mapOf(
+    "type" to "object",
+    "properties" to mapOf(
+        "a" to mapOf("${'$'}ref" to "#/definitions/size"),
+        "b" to mapOf("${'$'}ref" to "#/definitions/size")
+    )
+)
+
 val data = PetsModel(mutableListOf(PetModel(1, "max"), PetModel(2, "moritz")))
 fun newId() = ((data.pets.map { it.id ?: 0 }.max()) ?: 0) + 1
 
-@group("pet operations")
-@location("/pets/{id}")
+@Group("pet operations")
+@Location("/pets/{id}")
 class pet(val id: Int)
 
-@group("pet operations")
-@location("/pets")
+@Group("pet operations")
+@Location("/pets")
 class pets
 
-@group("debug")
-@location("/request/info")
+@Group("shape operations")
+@Location("/shapes")
+class shapes
+
+@Group("debug")
+@Location("/request/info")
 class requestInfo
 
-@group("debug")
-@location("/request/withHeader")
+@Group("debug")
+@Location("/request/withHeader")
 class withHeader
 
 class Header(val optionalHeader: String?, val mandatoryHeader: Int)
 
-@group("debug")
-@location("/request/withQueryParameter")
+@Group("debug")
+@Location("/request/withQueryParameter")
 class withQueryParameter
 
 class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
-fun main(args: Array<String>) {
-    val server = embeddedServer(Netty, getInteger("server.port", 8080)) {
+private fun run(port: Int) {
+    println("Launching on port `$port`")
+    val server = embeddedServer(Netty, port) {
         install(DefaultHeaders)
         install(Compression)
         install(CallLogging)
-        install(GsonSupport) {
-            setPrettyPrinting()
+        install(ContentNegotiation) {
+            gson {
+                setPrettyPrinting()
+            }
         }
         install(Locations)
         install(SwaggerSupport) {
             forwardRoot = true
             swagger.info = Information(
-                    version = "0.1",
-                    title = "sample api implemented in ktor",
-                    description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
-                    contact = Contact(
-                            name = "Niels Falk",
-                            url = "https://nielsfalk.de")
+                version = "0.1",
+                title = "sample api implemented in ktor",
+                description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
+                contact = Contact(
+                    name = "Niels Falk",
+                    url = "https://nielsfalk.de"
+                )
             )
+            swagger.definitions["size"] = sizeSchemaMap
         }
         routing {
             get<pets>("all".responds(ok<PetsModel>())) {
                 call.respond(data)
             }
-            post<pets, PetModel>("create".responds(ok<PetModel>())) { _, entity ->
-                //http201 would be better but there is no way to do this see org.jetbrains.ktor.gson.GsonSupport.renderJsonContent
-                call.respond(entity.copy(id = newId()).apply {
+            post<pets, PetModel>("create".responds(created<PetModel>())) { _, entity ->
+                call.respond(Created, entity.copy(id = newId()).apply {
                     data.pets.add(this)
                 })
             }
             get<pet>("find".responds(ok<PetModel>(), notFound())) { params ->
                 data.pets.find { it.id == params.id }
-                        ?.let {
-                            call.respond(it)
-                        }
+                    ?.let {
+                        call.respond(it)
+                    }
             }
             put<pet, PetModel>("update".responds(ok<PetModel>(), notFound())) { params, entity ->
                 if (data.pets.removeIf { it.id == params.id && it.id == entity.id }) {
@@ -98,35 +124,70 @@ fun main(args: Array<String>) {
                     call.respond(Unit)
                 }
             }
-            get<requestInfo>(responds(ok<Unit>()),
-                    respondRequestDetails())
-            get<withQueryParameter>(responds(ok<Unit>())
+            get<shapes>("all".responds(ok("Rectangle", rectangleSchemaMap))) {
+                call.respondText("""
+                    {
+                        "a" : 10,
+                        "b" : 25
+                    }
+                """.trimIndent(), ContentType.Application.Json)
+            }
+            get<requestInfo>(
+                responds(ok<Unit>()),
+                respondRequestDetails()
+            )
+            get<withQueryParameter>(
+                responds(ok<Unit>())
                     .parameter<QueryParameter>(),
-                    respondRequestDetails())
-            get<withHeader>(responds(ok<Unit>())
+                respondRequestDetails()
+            )
+            get<withHeader>(
+                responds(ok<Unit>())
                     .header<Header>(),
-                    respondRequestDetails())
+                respondRequestDetails()
+            )
         }
     }
     server.start(wait = true)
 }
 
-fun respondRequestDetails(): suspend PipelineContext<Unit>.(Any) -> Unit {
+fun respondRequestDetails(): suspend PipelineContext<Unit, ApplicationCall>.(Any) -> Unit {
     return {
-        call.respond(mapOf(
+        call.respond(
+            mapOf(
                 "parameter" to call.parameters,
                 "header" to call.request.headers
-        ).format())
+            ).format()
+        )
     }
 }
 
-private fun Map<String, ValuesMap>.format() =
-        mapValues {
-            it.value.toMap()
-                    .flatMap { (key, value) -> value.map { key to it } }
-                    .map { (key, value) -> "$key: $value" }
-                    .joinToString(separator = ",\n")
-        }
-                .map { (key, value) -> "$key:\n$value" }
-                .joinToString(separator = "\n\n")
+private fun Map<String, StringValues>.format() =
+    mapValues {
+        it.value.toMap()
+            .flatMap { (key, value) -> value.map { key to it } }
+            .map { (key, value) -> "$key: $value" }
+            .joinToString(separator = ",\n")
+    }
+        .map { (key, value) -> "$key:\n$value" }
+        .joinToString(separator = "\n\n")
 
+/**
+ * Launches the application and handles the args passed to [main].
+ */
+class Launcher : CliktCommand(
+    name = "ktor-sample-swagger"
+) {
+    companion object {
+        private const val defaultPort = 8080
+    }
+    private val port: Int by option("-p", "--port", help = "The port that this server should be started on. Defaults to $defaultPort.")
+        .int()
+        .default(defaultPort)
+
+    override fun run() {
+        run(port)
+    }
+}
+
+fun main(args: Array<String>) = Launcher().main(args)

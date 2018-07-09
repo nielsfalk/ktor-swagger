@@ -1,0 +1,35 @@
+include ":ktor-swagger"
+include ":ktor-sample-swagger"
+
+rootProject.name = 'ktor-swagger-root'
+
+
+/**
+ * This configures the gradle build so we can use non-standard build file names.
+ * Additionally, this project can support sub-projects who's build file is written in Kotlin.
+ *
+ * @param project The project to configure.
+ */
+def configureGradleBuild(ProjectDescriptor project) {
+    final String fileBaseName = project.name
+    final String projectBuildFileBaseName = fileBaseName
+    final File gradleBuild = new File(project.projectDir, "${projectBuildFileBaseName}.gradle")
+    final File kotlinBuild = new File(project.projectDir, "${projectBuildFileBaseName}.gradle.kts")
+    assert !(gradleBuild.exists() && kotlinBuild.exists()),
+            "Project ${project.name} can not have both a ${gradleBuild.name} and a ${kotlinBuild.name} file. " +
+                    "Rename one so that the other can serve as the base for the project's build"
+    if (gradleBuild.exists()) {
+        project.buildFileName = "$gradleBuild.name"
+    } else if (kotlinBuild.exists()) {
+        project.buildFileName = "$kotlinBuild.name"
+    } else {
+        assert false,
+                "Project `${project.name}` must have a either a file " +
+                        "containing ${gradleBuild.name} or ${kotlinBuild.name}"
+    }
+
+    // Any nested children projects also get configured.
+    project.children.each { configureGradleBuild(it) }
+}
+
+configureGradleBuild rootProject

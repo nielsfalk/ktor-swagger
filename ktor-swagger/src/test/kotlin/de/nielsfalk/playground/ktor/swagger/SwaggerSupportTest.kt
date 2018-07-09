@@ -1,48 +1,48 @@
 package de.nielsfalk.playground.ktor.swagger
 
 import com.winterbe.expekt.should
-import org.jetbrains.ktor.application.install
-import org.jetbrains.ktor.gson.GsonSupport
-import org.jetbrains.ktor.http.ContentType
-import org.jetbrains.ktor.http.HttpMethod.Companion.Get
-import org.jetbrains.ktor.testing.handleRequest
-import org.jetbrains.ktor.testing.withTestApplication
+import io.ktor.application.install
+import io.ktor.features.ContentNegotiation
+import io.ktor.gson.GsonConverter
+import io.ktor.http.ContentType
+import io.ktor.http.HttpMethod
+import io.ktor.server.testing.handleRequest
+import io.ktor.server.testing.withTestApplication
 import org.junit.Test
 
-/**
- * @author Niels Falk
- */
 class SwaggerSupportTest {
     @Test
     fun `installed apidocs`(): Unit = withTestApplication {
-        //when
+        // when
         application.install(SwaggerSupport) { forwardRoot = true }
 
-        //then
-        handleRequest(Get, "/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
-        handleRequest(Get, "/apidocs").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
-        handleRequest(Get, "/apidocs/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        // then
+        handleRequest(HttpMethod.Get, "/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        handleRequest(HttpMethod.Get, "/apidocs").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        handleRequest(HttpMethod.Get, "/apidocs/").response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
     }
 
     @Test
     fun `provide webjar`(): Unit = withTestApplication {
-        //when
+        // when
         application.install(SwaggerSupport) { forwardRoot = true }
 
-        //then
-        handleRequest(Get, "/apidocs/index.html").response.content.should.contain("<title>Swagger UI</title>")
+        // then
+        handleRequest(HttpMethod.Get, "/apidocs/index.html").response.content.should.contain("<title>Swagger UI</title>")
     }
 
     @Test
     fun `provide swaggerJson`(): Unit = withTestApplication {
-        //when
-        application.install(GsonSupport)
+        // when
+        application.install(ContentNegotiation) {
+            register(ContentType.Application.Json, GsonConverter())
+        }
         application.install(SwaggerSupport) { forwardRoot = true }
 
-        //then
+        // then
         handleRequest {
             uri = "/apidocs/swagger.json"
-            method = Get
+            method = HttpMethod.Get
             addHeader("Accept", ContentType.Application.Json.toString())
         }.response.content.should.contain("\"swagger\":\"2.0\"")
     }
