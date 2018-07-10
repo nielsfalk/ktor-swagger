@@ -1,4 +1,4 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
@@ -34,8 +34,10 @@ data class Metadata(
 fun String.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata =
     Metadata(responses = mapOf(*pairs), summary = this)
 
-fun responds(pair: Pair<HttpStatusCode, ResponseType>) = Metadata(responses = mapOf(pair))
-fun responses(vararg pairs: Pair<HttpStatusCode, ResponseType>) = Metadata(responses = mapOf(*pairs))
+fun responds(pair: Pair<HttpStatusCode, ResponseType>) =
+    Metadata(responses = mapOf(pair))
+fun responses(vararg pairs: Pair<HttpStatusCode, ResponseType>) =
+    Metadata(responses = mapOf(*pairs))
 
 sealed class ResponseType
 
@@ -47,11 +49,20 @@ sealed class ReceiveType
 data class ReceiveFromReflection(val typeInfo: TypeInfo) : ReceiveType()
 data class ReceiveSchema(val name: ModelName, val schema: Any) : ReceiveType()
 
-inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(typeInfo<T>())
+inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(
+    typeInfo<T>()
+)
 fun ok(name: String, schema: Any) = OK to ResponseSchema(name, schema)
-inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(typeInfo<T>())
-fun created(name: String, schema: Any): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(name, schema)
-inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(typeInfo<Unit>())
+inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(
+    typeInfo<T>()
+)
+fun created(name: String, schema: Any): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(
+    name,
+    schema
+)
+inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
+    typeInfo<Unit>()
+)
 
 @ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
@@ -74,7 +85,9 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
     application.swagger.apply {
-        metadata.apply<LOCATION, ENTITY>(HttpMethod.Post, ReceiveSchema(name = typeInfo<ENTITY>().modelName(), schema = entitySchema))
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Post,
+            ReceiveSchema(name = typeInfo<ENTITY>().modelName(), schema = entitySchema)
+        )
     }
     return post<LOCATION> {
         body(this, it, call.receive())
@@ -101,7 +114,9 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
     application.swagger.apply {
-        metadata.apply<LOCATION, ENTITY>(HttpMethod.Put, ReceiveSchema(name = typeInfo<ENTITY>().modelName(), schema = entitySchema))
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Put,
+            ReceiveSchema(name = typeInfo<ENTITY>().modelName(), schema = entitySchema)
+        )
     }
     return put<LOCATION> {
         body(this, it, call.receive())

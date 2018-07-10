@@ -1,4 +1,4 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
 import io.ktor.application.install
@@ -62,7 +62,12 @@ class SwaggerManualSchemaTest {
     @Test
     fun `custom ok return type`() {
         applicationCustomRoute {
-            get<rectangles>("all".responds(ok("Rectangle", rectangleSchemaMap))) { }
+            get<rectangles>("all".responds(
+                ok(
+                    "Rectangle",
+                    rectangleSchemaMap
+                )
+            )) { }
         }
         swagger.definitions["size"].should.equal(sizeSchemaMap)
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
@@ -71,7 +76,10 @@ class SwaggerManualSchemaTest {
     @Test
     fun `custom put schema`() {
         applicationCustomRoute {
-            put<rectangles, Rectangle>(rectangleSchemaMap, "create".responds(created("Rectangles", rectanglesSchemaMap))) { _, _ ->
+            put<rectangles, Rectangle>(
+                rectangleSchemaMap, "create".responds(
+                    created("Rectangles", rectanglesSchemaMap)
+                )) { _, _ ->
             }
         }
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)

@@ -1,6 +1,6 @@
 @file:Suppress("UNCHECKED_CAST")
 
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
 import io.ktor.application.install
@@ -40,9 +40,15 @@ class SwaggerTest {
         }) {
             // when:
             application.routing {
-                put<toy, ToyModel>("update".responds(ok<ToyModel>(), notFound())) { _, _ -> }
+                put<toy, ToyModel>("update".responds(
+                    ok<ToyModel>(),
+                    notFound()
+                )) { _, _ -> }
                 post<toys, ToyModel>("create".responds(created<ToyModel>())) { _, _ -> }
-                get<toys>("all".responds(ok<ToysModel>(), notFound())) { }
+                get<toys>("all".responds(
+                    ok<ToysModel>(),
+                    notFound()
+                )) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
 
