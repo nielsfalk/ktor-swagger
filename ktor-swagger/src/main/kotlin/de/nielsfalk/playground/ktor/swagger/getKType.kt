@@ -12,7 +12,7 @@ import kotlin.reflect.KVariance
 import kotlin.reflect.full.createType
 
 /*
- * All of this code is coppied from the Gist posted by Udalov here:
+ * All of this code is copied from the Gist posted by Udalov here:
  * https://gist.github.com/udalov/bb6f398c2e643ee69586356fdd67e9b1
  */
 

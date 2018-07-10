@@ -10,12 +10,11 @@ import java.lang.reflect.Type
  * @return [ParameterizedType]
  */
 internal fun parameterize(raw: Class<*>, vararg typeArguments: Type): ParameterizedType {
-    val useOwner: Type?
-    if (raw.enclosingClass == null) {
+    val useOwner: Type? = if (raw.enclosingClass == null) {
         // no owner allowed for top-level
-        useOwner = null
+        null
     } else {
-        useOwner = raw.enclosingClass
+        raw.enclosingClass
     }
     require(raw.typeParameters.size == typeArguments.size) {
         "invalid number of type parameters specified: expected ${raw.typeParameters.size}, got ${typeArguments.size}"
