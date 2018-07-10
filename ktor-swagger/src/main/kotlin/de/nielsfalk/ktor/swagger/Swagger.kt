@@ -116,16 +116,16 @@ fun <T, R> KProperty1<T, R>.toParameter(
     }
 }
 
-internal fun ReceiveType.bodyParameter() =
+internal fun BodyType.bodyParameter() =
     when (this) {
-        is ReceiveFromReflection ->
+        is BodyFromReflection ->
             Parameter.create(
                 typeInfo.referenceProperty(),
                 name = "body",
                 description = typeInfo.modelName(),
                 `in` = body
             )
-        is ReceiveSchema ->
+        is BodyFromSchema ->
             Parameter.create(
                 referenceProperty(),
                 name = "body",
@@ -368,7 +368,7 @@ private fun KClass<*>.toModelProperty(
         }
 }
 
-private fun ReceiveSchema.referenceProperty(): Property =
+private fun BodyFromSchema.referenceProperty(): Property =
     Property(
         `$ref` = "#/definitions/" + name,
         description = name,
