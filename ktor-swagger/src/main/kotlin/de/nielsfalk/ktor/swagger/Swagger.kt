@@ -1,9 +1,9 @@
 @file:Suppress("MemberVisibilityCanPrivate", "unused")
 
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
-import de.nielsfalk.playground.ktor.swagger.ParameterInputType.body
-import de.nielsfalk.playground.ktor.swagger.ParameterInputType.query
+import de.nielsfalk.ktor.swagger.ParameterInputType.body
+import de.nielsfalk.ktor.swagger.ParameterInputType.query
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
 import io.ktor.application.feature
@@ -143,7 +143,9 @@ class Response(
         fun create(httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): Response {
             return Response(
                 description = if (typeInfo.type == Unit::class) httpStatusCode.description else typeInfo.responseDescription(),
-                schema = if (typeInfo.type == Unit::class) null else ModelReference.create(typeInfo.modelName())
+                schema = if (typeInfo.type == Unit::class) null else ModelReference.create(
+                    typeInfo.modelName()
+                )
             )
         }
 
@@ -179,7 +181,7 @@ class Parameter(
 ) {
     companion object {
         fun create(
-            property: de.nielsfalk.playground.ktor.swagger.Property,
+            property: Property,
             name: String,
             `in`: ParameterInputType,
             description: String = property.description ?: name,
@@ -353,7 +355,10 @@ private fun KClass<*>.toModelProperty(
             }
         } else if (java.isEnum) {
             val enumConstants = (this).java.enumConstants
-            Property(enum = enumConstants.map { (it as Enum<*>).name }, type = "string") to emptyTypeInfoList
+            Property(
+                enum = enumConstants.map { (it as Enum<*>).name },
+                type = "string"
+            ) to emptyTypeInfoList
         } else {
             val typeInfo = when (reifiedType) {
                 is ParameterizedType -> TypeInfo(this, reifiedType)

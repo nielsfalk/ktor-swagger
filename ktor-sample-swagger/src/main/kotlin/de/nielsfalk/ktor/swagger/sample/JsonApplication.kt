@@ -1,9 +1,21 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger.sample
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
+import de.nielsfalk.ktor.swagger.Contact
+import de.nielsfalk.ktor.swagger.Group
+import de.nielsfalk.ktor.swagger.Information
+import de.nielsfalk.ktor.swagger.SwaggerSupport
+import de.nielsfalk.ktor.swagger.created
+import de.nielsfalk.ktor.swagger.delete
+import de.nielsfalk.ktor.swagger.get
+import de.nielsfalk.ktor.swagger.notFound
+import de.nielsfalk.ktor.swagger.ok
+import de.nielsfalk.ktor.swagger.post
+import de.nielsfalk.ktor.swagger.put
+import de.nielsfalk.ktor.swagger.responds
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
@@ -45,7 +57,12 @@ val rectangleSchemaMap = mapOf(
     )
 )
 
-val data = PetsModel(mutableListOf(PetModel(1, "max"), PetModel(2, "moritz")))
+val data = PetsModel(
+    mutableListOf(
+        PetModel(1, "max"),
+        PetModel(2, "moritz")
+    )
+)
 fun newId() = ((data.pets.map { it.id ?: 0 }.max()) ?: 0) + 1
 
 @Group("pet operations")
@@ -114,24 +131,38 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                     data.pets.add(this)
                 })
             }
-            get<pet>("find".responds(ok<PetModel>(), notFound())) { params ->
+            get<pet>("find".responds(
+                ok<PetModel>(),
+                notFound()
+            )) { params ->
                 data.pets.find { it.id == params.id }
                     ?.let {
                         call.respond(it)
                     }
             }
-            put<pet, PetModel>("update".responds(ok<PetModel>(), notFound())) { params, entity ->
+            put<pet, PetModel>("update".responds(
+                ok<PetModel>(),
+                notFound()
+            )) { params, entity ->
                 if (data.pets.removeIf { it.id == params.id && it.id == entity.id }) {
                     data.pets.add(entity)
                     call.respond(entity)
                 }
             }
-            delete<pet>("delete".responds(ok<Unit>(), notFound())) { params ->
+            delete<pet>("delete".responds(
+                ok<Unit>(),
+                notFound()
+            )) { params ->
                 if (data.pets.removeIf { it.id == params.id }) {
                     call.respond(Unit)
                 }
             }
-            get<shapes>("all".responds(ok("Rectangle", rectangleSchemaMap))) {
+            get<shapes>("all".responds(
+                ok(
+                    "Rectangle",
+                    rectangleSchemaMap
+                )
+            )) {
                 call.respondText("""
                     {
                         "a" : 10,

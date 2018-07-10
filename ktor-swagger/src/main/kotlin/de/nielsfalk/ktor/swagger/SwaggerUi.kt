@@ -1,4 +1,4 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
 import io.ktor.application.ApplicationCall
 import io.ktor.content.OutgoingContent

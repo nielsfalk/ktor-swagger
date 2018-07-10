@@ -1,4 +1,4 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
 import io.ktor.client.call.TypeInfo
@@ -78,11 +78,15 @@ class ModelExtractionTest {
 
     @Test
     fun `reference model property`() {
-        val modelWithDiscovered = createModelData(typeInfo<ModelProperty>())
+        val modelWithDiscovered =
+            createModelData(typeInfo<ModelProperty>())
         val property = modelWithDiscovered.first.properties["something"] as Property
 
         property.`$ref`.should.equal("#/definitions/PropertyModel")
-        assertEqualTypeInfo(typeInfo<PropertyModel>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<PropertyModel>(),
+            modelWithDiscovered.second.first()
+        )
     }
 
     class ModelStringArray(val something: List<String>)
@@ -110,7 +114,10 @@ class ModelExtractionTest {
         property.type.should.equal("array")
         property.items?.`$ref`.should.equal("#/definitions/SubModelElement")
 
-        assertEqualTypeInfo(typeInfo<SubModelElement>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<SubModelElement>(),
+            modelWithDiscovered.second.first()
+        )
     }
 
     class ModelWithGenericSet<T>(val something: Set<T>)
@@ -124,7 +131,10 @@ class ModelExtractionTest {
         property.type.should.equal("array")
         property.items?.`$ref`.should.equal("#/definitions/SubModelElement")
 
-        assertEqualTypeInfo(typeInfo<SubModelElement>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<SubModelElement>(),
+            modelWithDiscovered.second.first()
+        )
     }
 
     @Test
@@ -137,7 +147,10 @@ class ModelExtractionTest {
         property.type.should.equal("array")
         property.items?.`$ref`.should.equal("#/definitions/ModelWithGenericSetOfString")
 
-        assertEqualTypeInfo(typeInfo<ModelWithGenericSet<String>>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<ModelWithGenericSet<String>>(),
+            modelWithDiscovered.second.first()
+        )
     }
 
     class ModelNestedGenericList<T>(val somethingNested: List<List<T>>)
@@ -152,7 +165,10 @@ class ModelExtractionTest {
         property.items?.type.should.equal("array")
         property.items?.items?.`$ref`.should.equal("#/definitions/SubModelElement")
 
-        assertEqualTypeInfo(typeInfo<SubModelElement>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<SubModelElement>(),
+            modelWithDiscovered.second.first()
+        )
     }
 
     @Test
@@ -189,7 +205,10 @@ class ModelExtractionTest {
         property.items?.type.should.equal("array")
         property.items?.items?.`$ref`.should.equal("#/definitions/SubModelElement")
 
-        assertEqualTypeInfo(typeInfo<SubModelElement>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<SubModelElement>(),
+            modelWithDiscovered.second.first()
+        )
     }
 
     class GenericSubModel<S>(val value: S)
@@ -203,7 +222,10 @@ class ModelExtractionTest {
 
         val typeInfoForProperty = typeInfo<GenericSubModel<String>>()
 
-        assertEqualTypeInfo(typeInfoForProperty, property.returnTypeInfo(typeInfo.reifiedType))
+        assertEqualTypeInfo(
+            typeInfoForProperty,
+            property.returnTypeInfo(typeInfo.reifiedType)
+        )
     }
 
     @Test
@@ -213,7 +235,10 @@ class ModelExtractionTest {
         val property = GenericSubModel::class.memberProperties.first()
 
         val typeInfoForProperty = typeInfo<String>()
-        assertEqualTypeInfo(typeInfoForProperty, property.returnTypeInfo(typeInfo.reifiedType))
+        assertEqualTypeInfo(
+            typeInfoForProperty,
+            property.returnTypeInfo(typeInfo.reifiedType)
+        )
     }
 
     @Test
@@ -234,7 +259,10 @@ class ModelExtractionTest {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelWithNestedGeneric<String>>())
 
-        assertEqualTypeInfo(typeInfo<GenericSubModel<String>>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<GenericSubModel<String>>(),
+            modelWithDiscovered.second.first()
+        )
 
         val property = modelWithDiscovered.first.properties["subModelElement"]!!
         property.`$ref`.should.equal("#/definitions/GenericSubModelOfString")
@@ -251,7 +279,10 @@ class ModelExtractionTest {
     fun `extract generic sub-model with two generics`() {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelWithTwoNestedGeneric<String, Int>>())
-        assertEqualTypeInfo(typeInfo<GenericSubModelTwoGenerics<String, Int>>(), modelWithDiscovered.second.first())
+        assertEqualTypeInfo(
+            typeInfo<GenericSubModelTwoGenerics<String, Int>>(),
+            modelWithDiscovered.second.first()
+        )
         val property = modelWithDiscovered.first.properties["subModelElement"]!!
         property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInt")
     }
