@@ -1,4 +1,4 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger
 
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
@@ -125,7 +125,15 @@ class SwaggerSupport(
                 }
             }
 
-            return Operation.create(this, responses, parameters, location, group, method, locationType)
+            return Operation.create(
+                this,
+                responses,
+                parameters,
+                location,
+                group,
+                method,
+                locationType
+            )
         }
 
         swagger.paths

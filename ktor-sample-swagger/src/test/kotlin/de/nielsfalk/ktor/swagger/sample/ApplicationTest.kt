@@ -1,4 +1,4 @@
-package de.nielsfalk.playground.ktor.swagger
+package de.nielsfalk.ktor.swagger.sample
 
 import org.junit.Test
 import java.util.concurrent.TimeUnit
