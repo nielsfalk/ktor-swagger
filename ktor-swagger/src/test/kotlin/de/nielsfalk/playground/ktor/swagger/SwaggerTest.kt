@@ -10,10 +10,6 @@ import io.ktor.routing.routing
 import io.ktor.server.testing.withTestApplication
 import org.junit.Before
 import org.junit.Test
-import java.time.Instant
-import java.time.LocalDate
-import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
 
 data class ToyModel(val id: Int?, val name: String)
 data class ToysModel(val toys: MutableList<ToyModel>)
@@ -119,107 +115,4 @@ class SwaggerTest {
         mandatory?.required.should.equal(true)
         mandatory?.`in`.should.equal(ParameterInputType.header)
     }
-
-    enum class EnumClass {
-        first, second, third
-    }
-
-    private fun createAndExtractModelData(kClass: KClass<*>) =
-        createModelData(kClass).first
-
-    @Test
-    fun `enum Property`() {
-        class Model(val enumValue: EnumClass?)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["enumValue"] as Property
-
-        property.type.should.equal("string")
-        property.enum.should.contain.elements("first", "second", "third")
-    }
-
-    @Test
-    fun `instant Property`() {
-        class Model(val timestamp: Instant?)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["timestamp"] as Property
-
-        property.type.should.equal("string")
-        property.format.should.equal("date-time")
-    }
-
-    @Test
-    fun `localDate Property`() {
-        class Model(val birthDate: LocalDate?)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["birthDate"] as Property
-
-        property.type.should.equal("string")
-        property.format.should.equal("date")
-    }
-
-    @Test
-    fun `long Property`() {
-        class Model(val long: Long?)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["long"] as Property
-
-        property.type.should.equal("integer")
-        property.format.should.equal("int64")
-    }
-
-    @Test
-    fun `double Property`() {
-        class Model(val double: Double?)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["double"] as Property
-
-        property.type.should.equal("number")
-        property.format.should.equal("double")
-    }
-
-    class PropertyModel
-
-    @Test
-    fun `reference model property`() {
-        class Model(val something: PropertyModel?)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["something"] as Property
-
-        property.`$ref`.should.equal("#/definitions/PropertyModel")
-    }
-
-    @Test
-    fun `string array`() {
-        class Model(val something: List<String>)
-
-        val property = createAndExtractModelData(Model::class)
-            .properties["something"] as Property
-
-        property.type.should.equal("array")
-        property.items?.type.should.equal("string")
-    }
-
-    class Parameters(val optional: String?, val mandatory: String)
-
-    @Test
-    fun `optional parameters`() {
-        val map = Parameters::class.memberProperties.map { it.toParameter("").first }
-
-        map.find { it.name == "optional" }!!.required.should.equal(false)
-        map.find { it.name == "mandatory" }!!.required.should.equal(true)
-    }
-}
-
-private fun MutableMap<String, Any>.find(vararg segments: String): MutableMap<String, Any> {
-    var current = this
-    for (segment in segments) {
-        current = current[segment] as MutableMap<String, Any>
-    }
-    return current
 }

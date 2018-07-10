@@ -30,6 +30,8 @@ data class PetModel(val id: Int?, val name: String)
 
 data class PetsModel(val pets: MutableList<PetModel>)
 
+data class Model<T>(val elements: MutableList<T>)
+
 val sizeSchemaMap = mapOf(
     "type" to "number",
     "minimum" to 0
@@ -53,6 +55,10 @@ class pet(val id: Int)
 @Group("pet operations")
 @Location("/pets")
 class pets
+
+@Group("generic operations")
+@Location("/genericPets")
+class genericPets
 
 @Group("shape operations")
 @Location("/shapes")
@@ -132,6 +138,9 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                         "b" : 25
                     }
                 """.trimIndent(), ContentType.Application.Json)
+            }
+            get<genericPets>("all".responds(ok<Model<PetModel>>())) {
+                call.respond(data)
             }
             get<requestInfo>(
                 responds(ok<Unit>()),
