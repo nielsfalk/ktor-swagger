@@ -33,11 +33,7 @@ data class Metadata(
 }
 
 fun Metadata.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata =
-    copy(
-        responses = (responses.entries + mapOf(*pairs).entries)
-            .map { it.key to it.value }
-            .toMap()
-    )
+    copy(responses = (responses + mapOf(*pairs)))
 
 /**
  * Defines the schema for the body of the message of the incoming JSON object.

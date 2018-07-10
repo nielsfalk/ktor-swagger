@@ -98,7 +98,7 @@ class SwaggerManualSchemaTest {
     }
 
     @Test
-    fun `custom schema name on the recive type`() {
+    fun `custom schema name on the receive type`() {
         val customName = "CustomName"
         applicationCustomRoute {
             post<rectangles, Rectangle>("create".body(customName, rectangleSchemaMap).responds(
