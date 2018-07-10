@@ -1,6 +1,6 @@
 language: java
 
-script: ./gradlew build jacocoRootReport --no-daemon
+script: ./gradlew build jacocoRootReport --no-daemon --console=plain
 
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
