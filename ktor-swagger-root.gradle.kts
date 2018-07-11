@@ -15,7 +15,9 @@ buildscript {
 plugins {
     // https://github.com/diffplug/spotless/tree/master/plugin-gradle
     id("com.diffplug.gradle.spotless") version "3.10.0"
+    id("com.jfrog.bintray") version "1.8.2"
     jacoco
+    `maven-publish`
 }
 
 object Versions {
@@ -29,8 +31,8 @@ allprojects {
     apply {
         plugin("com.diffplug.gradle.spotless")
     }
-    group = "de.nielsfalk.playground"
-    version = "0.1-SNAPSHOT"
+    group = "de.nielsfalk.ktor"
+    version = "0.1"
 
     repositories {
         mavenCentral()
@@ -128,6 +130,44 @@ allprojects {
         // If this project has the plugin applied, configure the tool version.
         jacoco {
             toolVersion = "0.8.1"
+        }
+    }
+}
+
+project(":ktor-swagger") {
+    apply(plugin = "com.jfrog.bintray")
+    apply(plugin = "maven-publish")
+
+    val sourceJarTask = task<Jar>("sourceJar") {
+        from(java.sourceSets["main"].allSource)
+        classifier = "sources"
+    }
+
+    val publicationName = "publication-$name"
+
+    // This ensures that the entire project's configuration has been resolved before creating a publish artifact.
+    publishing {
+        publications {
+            create<MavenPublication>(publicationName) {
+                from(components["java"])
+                artifact(sourceJarTask)
+            }
+        }
+    }
+
+    bintray {
+        user = properties["bintray.publish.user"].toString()
+        key = properties["bintray.publish.key"].toString()
+        setPublications(publicationName)
+        with(pkg) {
+            userOrg = "ktor-swagger"
+            repo = "maven-artifacts"
+            name = "ktor-swagger"
+            publish = true
+            setLicenses("Apache-2.0")
+            setLabels("ktor", "kotlin", "web server", "swagger")
+            vcsUrl = "https://github.com/nielsfalk/ktor-swagger.git"
+            githubRepo = "https://github.com/nielsfalk/ktor-swagger"
         }
     }
 }

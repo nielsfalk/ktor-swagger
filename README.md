@@ -1,7 +1,7 @@
 # [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/)
 
 [![Build Status](https://travis-ci.com/nielsfalk/ktor-swagger.svg?branch=master)](https://travis-ci.com/nielsfalk/ktor-swagger)
-
+[![Download](https://api.bintray.com/packages/ktor-swagger/maven-artifacts/ktor-swagger/images/download.svg) ](https://bintray.com/ktor-swagger/maven-artifacts/ktor-swagger/_latestVersion)
 
 This project provides a library that allows you you to integrate the
  [swaggerUi](https://swagger.io/) with [ktor](https://github.com/Kotlin/ktor)
@@ -35,9 +35,6 @@ routing {
 ## Project Status
 
 This project is a proof of concept built on a library to support this functionality.
-
-For now, if you would like to experiment with the library, we reccomend using this project as an included
-library through the [Gradle Composite Build Feature](https://docs.gradle.org/current/userguide/composite_builds.html).
 
 There is an open proposal to include this project as an official Ktor feature
 [here](https://github.com/ktorio/ktor/issues/453).
