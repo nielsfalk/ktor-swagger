@@ -53,28 +53,49 @@ class SwaggerSupport(
         }
     }
 
-    inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(
-        method: HttpMethod,
-        receiveType: ReceiveType = ReceiveFromReflection(typeInfo<ENTITY_TYPE>())
-    ) {
-        val clazz = LOCATION::class.java
+    /**
+     * The [HttpMethod] types that don't support having a HTTP body element.
+     */
+    private val methodForbidsBody = setOf(HttpMethod.Get, HttpMethod.Delete)
+
+    inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
+        apply(LOCATION::class, typeInfo<ENTITY_TYPE>(), method)
+    }
+
+    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
+        bodySchema?.let {
+            BodyFromSchema(
+                name = bodySchema.name ?: typeInfo.modelName(),
+                schema = bodySchema.schema
+            )
+        } ?: BodyFromReflection(typeInfo)
+
+    private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
+        require(!(methodForbidsBody.contains(method) && bodySchema != null)) {
+            "Method type $method does not support a body parameter."
+        }
+
+    fun Metadata.apply(locationClass: KClass<*>, bodyTypeInfo: TypeInfo, method: HttpMethod) {
+        requireMethodSupportsBody(method)
+        val bodyType = createBodyType(bodyTypeInfo)
+        val clazz = locationClass.java
         val location = clazz.getAnnotation(Location::class.java)
         val tags = clazz.getAnnotation(Group::class.java)
 
-        applyOperations(location, tags, method, LOCATION::class, receiveType)
+        applyOperations(location, tags, method, locationClass, bodyType)
     }
 
-    fun <LOCATION : Any> Metadata.applyOperations(
+    private fun <LOCATION : Any> Metadata.applyOperations(
         location: Location,
         group: Group?,
         method: HttpMethod,
         locationType: KClass<LOCATION>,
-        receiveType: ReceiveType
+        bodyType: BodyType
     ) {
 
-        when (receiveType) {
-            is ReceiveSchema -> addDefintion(receiveType.name, receiveType.schema)
-            is ReceiveFromReflection -> receiveType.typeInfo.let { typeInfo ->
+        when (bodyType) {
+            is BodyFromSchema -> addDefintion(bodyType.name, bodyType.schema)
+            is BodyFromReflection -> bodyType.typeInfo.let { typeInfo ->
                 if (typeInfo.type != Unit::class) {
                     addDefinition(typeInfo)
                 }
@@ -98,8 +119,8 @@ class SwaggerSupport(
             }.toMap()
 
             val parameters = mutableListOf<Parameter>().apply {
-                if ((receiveType as? ReceiveFromReflection)?.typeInfo?.type != Unit::class) {
-                    add(receiveType.bodyParameter())
+                if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
+                    add(bodyType.bodyParameter())
                 }
                 addAll(locationType.memberProperties.map {
                     it.toParameter(location.path).let {

@@ -62,12 +62,14 @@ class SwaggerManualSchemaTest {
     @Test
     fun `custom ok return type`() {
         applicationCustomRoute {
-            get<rectangles>("all".responds(
-                ok(
-                    "Rectangle",
-                    rectangleSchemaMap
+            get<rectangles>(
+                "all".responds(
+                    ok(
+                        "Rectangle",
+                        rectangleSchemaMap
+                    )
                 )
-            )) { }
+            ) { }
         }
         swagger.definitions["size"].should.equal(sizeSchemaMap)
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
@@ -76,10 +78,10 @@ class SwaggerManualSchemaTest {
     @Test
     fun `custom put schema`() {
         applicationCustomRoute {
-            put<rectangles, Rectangle>(
-                rectangleSchemaMap, "create".responds(
+            put<rectangles, Rectangle>("create".body(rectangleSchemaMap).responds(
                     created("Rectangles", rectanglesSchemaMap)
-                )) { _, _ ->
+                )
+            ) { _, _ ->
             }
         }
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
@@ -88,9 +90,37 @@ class SwaggerManualSchemaTest {
             should.not.be.`null`
         }?.also { operation ->
             operation.summary.should.equal("create")
-            operation.parameters.find { it.`in` == ParameterInputType.body }?.schema?.`$ref`.should.equal("#/definitions/Rectangle")
+            operation.parameters.find { it.`in` == ParameterInputType.body }
+                ?.schema?.`$ref`.should.equal("#/definitions/Rectangle")
             operation.responses.keys.should.contain("201")
             operation.responses["201"]?.schema?.`$ref`.should.equal("#/definitions/Rectangles")
+        }
+    }
+
+    @Test
+    fun `custom schema name on the receive type`() {
+        val customName = "CustomName"
+        applicationCustomRoute {
+            post<rectangles, Rectangle>("create".body(customName, rectangleSchemaMap).responds(
+                    created("Rectangles", rectanglesSchemaMap)
+                )
+            ) { _, _ ->
+            }
+        }
+        swagger.definitions[customName].should.equal(rectangleSchemaMap)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `body in get throws exception`() {
+        applicationCustomRoute {
+            get<rectangles>("Get All".body("")) {}
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `body in delete throws exception`() {
+        applicationCustomRoute {
+            delete<rectangles>("Delete All".body("")) {}
         }
     }
 }
