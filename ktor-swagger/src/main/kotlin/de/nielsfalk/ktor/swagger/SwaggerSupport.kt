@@ -1,5 +1,12 @@
 package de.nielsfalk.ktor.swagger
 
+import de.nielsfalk.ktor.swagger.version.shared.CommonBase
+import de.nielsfalk.ktor.swagger.version.shared.Group
+import de.nielsfalk.ktor.swagger.version.shared.Operation
+import de.nielsfalk.ktor.swagger.version.shared.Parameter
+import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
+import de.nielsfalk.ktor.swagger.version.v2.Swagger
+import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationFeature
@@ -18,14 +25,15 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 
 class SwaggerSupport(
-    val swagger: Swagger
+    val swagger: Swagger?,
+    val openApi: OpenApi?
 ) {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
         override val key = AttributeKey<SwaggerSupport>("SwaggerSupport")
 
         override fun install(pipeline: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
-            val (path, forwardRoot, provideUi, swagger) = SwaggerUiConfiguration().apply(configure)
-            val feature = SwaggerSupport(swagger)
+            val (path, forwardRoot, provideUi, swagger, openApi) = SwaggerUiConfiguration().apply(configure)
+            val feature = SwaggerSupport(swagger, openApi)
             pipeline.routing {
                 get("/$path") {
                     redirect(path)
@@ -34,7 +42,7 @@ class SwaggerSupport(
                 get("/$path/{fileName}") {
                     val filename = call.parameters["fileName"]
                     if (filename == "swagger.json") {
-                        call.respond(swagger)
+                        call.respond(feature.common)
                     } else {
                         ui?.serve(filename, call)
                     }
@@ -52,6 +60,25 @@ class SwaggerSupport(
             call.respondRedirect("/$path/index.html?url=swagger.json")
         }
     }
+
+    val common: CommonBase =
+        swagger ?: openApi ?: throw IllegalArgumentException("Neither `swagger` or `openApi` specified.")
+
+    fun <R> commonVersioned(
+        swaggerHandler: Swagger.() -> R,
+        openApiHandler: OpenApi.() -> R
+    ): R =
+        when (common) {
+            is Swagger -> common.swaggerHandler()
+            is OpenApi -> common.openApiHandler()
+            else -> throw IllegalStateException("Must be of type ${Swagger::class.simpleName} or ${OpenApi::class.simpleName}")
+        }
+
+    private val variation: SpecVariation
+        get() = commonVersioned(
+            { "#/definitions/" },
+            { "#/components/schemas/" }
+        ).let { SpecVariation(it) }
 
     /**
      * The [HttpMethod] types that don't support having a HTTP body element.
@@ -107,11 +134,11 @@ class SwaggerSupport(
                 val response = when (type) {
                     is ResponseFromReflection -> {
                         addDefinition(type.type)
-                        Response.create(status, type.type)
+                        Response.create(variation, status, type.type)
                     }
                     is ResponseSchema -> {
                         addDefintion(type.name, type.schema)
-                        Response.create(type.name)
+                        Response.create(variation, type.name)
                     }
                 }
 
@@ -119,30 +146,32 @@ class SwaggerSupport(
             }.toMap()
 
             val parameters = mutableListOf<Parameter>().apply {
-                if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
-                    add(bodyType.bodyParameter())
-                }
-                addAll(locationType.memberProperties.map {
-                    it.toParameter(location.path).let {
-                        addDefinitions(it.second)
-                        it.first
+                variation {
+                    if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
+                        add(bodyType.bodyParameter())
                     }
-                })
-                parameter?.let {
-                    addAll(it.memberProperties.map {
-                        it.toParameter(location.path, ParameterInputType.query).let {
+                    addAll(locationType.memberProperties.map {
+                        it.toParameter(location.path).let {
                             addDefinitions(it.second)
                             it.first
                         }
                     })
-                }
-                headers?.let {
-                    addAll(it.memberProperties.map {
-                        it.toParameter(location.path, ParameterInputType.header).let {
-                            addDefinitions(it.second)
-                            it.first
-                        }
-                    })
+                    parameter?.let {
+                        addAll(it.memberProperties.map {
+                            it.toParameter(location.path, ParameterInputType.query).let {
+                                addDefinitions(it.second)
+                                it.first
+                            }
+                        })
+                    }
+                    headers?.let {
+                        addAll(it.memberProperties.map {
+                            it.toParameter(location.path, ParameterInputType.header).let {
+                                addDefinitions(it.second)
+                                it.first
+                            }
+                        })
+                    }
                 }
             }
 
@@ -152,12 +181,11 @@ class SwaggerSupport(
                 parameters,
                 location,
                 group,
-                method,
-                locationType
+                method
             )
         }
 
-        swagger.paths
+        common.paths
             .getOrPut(location.path) { mutableMapOf() }
             .put(
                 method.value.toLowerCase(),
@@ -166,17 +194,25 @@ class SwaggerSupport(
     }
 
     private fun addDefintion(name: String, schema: Any) {
-        swagger.definitions.putIfAbsent(name, schema)
+        commonVersioned(
+            { definitions.putIfAbsent(name, schema) },
+            { components.schemas.putIfAbsent(name, schema) }
+        )
     }
 
     private fun addDefinition(typeInfo: TypeInfo) {
         if (typeInfo.type != Unit::class) {
             val accruedNewDefinitions = mutableListOf<TypeInfo>()
-            swagger.definitions.computeIfAbsent(typeInfo.modelName()) {
-                val modelWithAdditionalDefinitions = createModelData(typeInfo)
-                accruedNewDefinitions.addAll(modelWithAdditionalDefinitions.second)
-                modelWithAdditionalDefinitions.first
-            }
+            commonVersioned(
+                { definitions },
+                { components.schemas })
+                .computeIfAbsent(typeInfo.modelName()) {
+                    val modelWithAdditionalDefinitions = variation {
+                        createModelData(typeInfo)
+                    }
+                    accruedNewDefinitions.addAll(modelWithAdditionalDefinitions.second)
+                    modelWithAdditionalDefinitions.first
+                }
 
             accruedNewDefinitions.forEach { addDefinition(it) }
         }
@@ -192,5 +228,6 @@ data class SwaggerUiConfiguration(
     var path: String = "apidocs",
     var forwardRoot: Boolean = false,
     var provideUi: Boolean = true,
-    var swagger: Swagger = Swagger()
+    var swagger: Swagger? = null,
+    var openApi: OpenApi? = null
 )

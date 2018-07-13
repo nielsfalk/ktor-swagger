@@ -4,9 +4,10 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
-import de.nielsfalk.ktor.swagger.Contact
-import de.nielsfalk.ktor.swagger.Group
-import de.nielsfalk.ktor.swagger.Information
+import de.nielsfalk.ktor.swagger.version.shared.Contact
+import de.nielsfalk.ktor.swagger.version.shared.Group
+import de.nielsfalk.ktor.swagger.version.shared.Information
+import de.nielsfalk.ktor.swagger.version.v3.Schema
 import de.nielsfalk.ktor.swagger.SwaggerSupport
 import de.nielsfalk.ktor.swagger.created
 import de.nielsfalk.ktor.swagger.delete
@@ -16,6 +17,7 @@ import de.nielsfalk.ktor.swagger.ok
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
 import de.nielsfalk.ktor.swagger.responds
+import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
@@ -77,6 +79,20 @@ class pets
 @Location("/genericPets")
 class genericPets
 
+const val petUuid = "petUuid"
+@Group("generic operations")
+@Location("/pet/custom/{id}")
+class petCustomSchemaParam(
+    @Schema(petUuid)
+    val id: String
+)
+
+val petIdSchema = mapOf(
+    "type" to "string",
+    "format" to "date",
+    "description" to "The identifier of the pet to be accessed"
+)
+
 @Group("shape operations")
 @Location("/shapes")
 class shapes
@@ -111,16 +127,19 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
         install(Locations)
         install(SwaggerSupport) {
             forwardRoot = true
-            swagger.info = Information(
-                version = "0.1",
-                title = "sample api implemented in ktor",
-                description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
-                contact = Contact(
-                    name = "Niels Falk",
-                    url = "https://nielsfalk.de"
+            openApi = OpenApi().apply {
+                info = Information(
+                    version = "0.1",
+                    title = "sample api implemented in ktor",
+                    description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
+                    contact = Contact(
+                        name = "Niels Falk",
+                        url = "https://nielsfalk.de"
+                    )
                 )
-            )
-            swagger.definitions["size"] = sizeSchemaMap
+                components.schemas["size"] = sizeSchemaMap
+                components.schemas[petUuid] = petIdSchema
+            }
         }
         routing {
             get<pets>("all".responds(ok<PetsModel>())) {
@@ -172,6 +191,9 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
             }
             get<genericPets>("all".responds(ok<Model<PetModel>>())) {
                 call.respond(data)
+            }
+
+            get<petCustomSchemaParam>("pet by id".responds(ok<PetModel>())) {
             }
             get<requestInfo>(
                 responds(ok<Unit>()),

@@ -1,6 +1,8 @@
 package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
+import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
+import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
@@ -51,11 +53,11 @@ class SwaggerManualSchemaTest {
         withTestApplication({
             install(Locations)
             install(SwaggerSupport) {
-                swagger.definitions["size"] = sizeSchemaMap
+                swagger = Swagger().apply { definitions["size"] = sizeSchemaMap }
             }
         }) {
             application.routing(configuration)
-            this@SwaggerManualSchemaTest.swagger = application.swagger.swagger
+            this@SwaggerManualSchemaTest.swagger = application.swagger.swagger!!
         }
     }
 

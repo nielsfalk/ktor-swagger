@@ -1,5 +1,6 @@
 package de.nielsfalk.ktor.swagger
 
+import de.nielsfalk.ktor.swagger.version.shared.ModelName
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.client.call.TypeInfo

@@ -3,6 +3,10 @@
 package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
+import de.nielsfalk.ktor.swagger.version.shared.Group
+import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
+import de.nielsfalk.ktor.swagger.version.shared.Property
+import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
@@ -36,7 +40,9 @@ class SwaggerTest {
     fun setUp() {
         withTestApplication({
             install(Locations)
-            install(SwaggerSupport)
+            install(SwaggerSupport) {
+                swagger = Swagger()
+            }
         }) {
             // when:
             application.routing {
@@ -52,7 +58,7 @@ class SwaggerTest {
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
 
-            this@SwaggerTest.swagger = application.swagger.swagger
+            this@SwaggerTest.swagger = application.swagger.swagger!!
         }
     }
 
