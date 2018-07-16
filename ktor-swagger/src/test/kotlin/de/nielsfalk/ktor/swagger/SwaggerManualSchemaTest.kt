@@ -1,9 +1,12 @@
 package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
+import de.nielsfalk.ktor.swagger.version.shared.ModelReference
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
-import de.nielsfalk.ktor.swagger.version.v2.Response
+import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
+import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
+import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
@@ -48,6 +51,7 @@ data class Rectangle(
 
 class SwaggerManualSchemaTest {
     private lateinit var swagger: Swagger
+    private lateinit var openApi: OpenApi
 
     @ContextDsl
     private fun applicationCustomRoute(configuration: Routing.() -> Unit) {
@@ -55,10 +59,12 @@ class SwaggerManualSchemaTest {
             install(Locations)
             install(SwaggerSupport) {
                 swagger = Swagger().apply { definitions["size"] = sizeSchemaMap }
+                openApi = OpenApi().apply { components.schemas["size"] = sizeSchemaMap }
             }
         }) {
             application.routing(configuration)
             this@SwaggerManualSchemaTest.swagger = application.swagger.swagger!!
+            this@SwaggerManualSchemaTest.openApi = application.swagger.openApi!!
         }
     }
 
@@ -75,7 +81,9 @@ class SwaggerManualSchemaTest {
             ) { }
         }
         swagger.definitions["size"].should.equal(sizeSchemaMap)
+        openApi.components.schemas["size"].should.equal(sizeSchemaMap)
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
+        openApi.components.schemas["Rectangle"].should.equal(rectangleSchemaMap)
     }
 
     @Test
@@ -88,15 +96,27 @@ class SwaggerManualSchemaTest {
             }
         }
         swagger.definitions["Rectangle"].should.equal(rectangleSchemaMap)
+        openApi.components.schemas["Rectangle"].should.equal(rectangleSchemaMap)
         swagger.definitions["Rectangles"].should.equal(rectanglesSchemaMap)
+        openApi.components.schemas["Rectangles"].should.equal(rectanglesSchemaMap)
         swagger.paths[rectanglesLocation]?.get("put").apply {
             should.not.be.`null`
         }?.also { operation ->
             operation.summary.should.equal("create")
-            operation.parameters.find { it.`in` == ParameterInputType.body }
-                ?.schema?.`$ref`.should.equal("#/definitions/Rectangle")
             operation.responses.keys.should.contain("201")
-            (operation.responses["201"] as Response).schema?.`$ref`.should.equal("#/definitions/Rectangles")
+            (operation.parameters.find { it.`in` == ParameterInputType.body }?.schema as ModelReference)
+                .`$ref`.should.equal("#/definitions/Rectangle")
+            (operation.responses["201"] as ResponseV2).schema?.`$ref`.should.equal("#/definitions/Rectangles")
+        }
+        openApi.paths[rectanglesLocation]?.get("put").apply {
+            should.not.be.`null`
+        }?.also { operation ->
+            operation.summary.should.equal("create")
+            operation.responses.keys.should.contain("201")
+            (operation.parameters.find { it.`in` == ParameterInputType.body }?.schema as ModelReference)
+                .`$ref`.should.equal("#/components/schemas/Rectangle")
+            (operation.responses["201"] as ResponseV3)
+                .content?.get("application/json")?.schema?.`$ref`.should.equal("#/components/schemas/Rectangles")
         }
     }
 
@@ -111,6 +131,7 @@ class SwaggerManualSchemaTest {
             }
         }
         swagger.definitions[customName].should.equal(rectangleSchemaMap)
+        openApi.components.schemas[customName].should.equal(rectangleSchemaMap)
     }
 
     @Test(expected = IllegalArgumentException::class)

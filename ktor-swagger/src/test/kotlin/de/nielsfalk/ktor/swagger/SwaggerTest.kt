@@ -8,6 +8,7 @@ import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.v2.Response
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
+import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
@@ -20,11 +21,13 @@ data class ToyModel(val id: Int?, val name: String)
 data class ToysModel(val toys: MutableList<ToyModel>)
 
 const val toysLocation = "/toys/{id}"
+
 @Group("toy")
 @Location(toysLocation)
 class toy(val id: Int)
 
 const val toyLocation = "/toys"
+
 @Location(toyLocation)
 class toys
 
@@ -43,19 +46,24 @@ class SwaggerTest {
             install(Locations)
             install(SwaggerSupport) {
                 swagger = Swagger()
+                openApi = OpenApi()
             }
         }) {
             // when:
             application.routing {
-                put<toy, ToyModel>("update".responds(
-                    ok<ToyModel>(),
-                    notFound()
-                )) { _, _ -> }
+                put<toy, ToyModel>(
+                    "update".responds(
+                        ok<ToyModel>(),
+                        notFound()
+                    )
+                ) { _, _ -> }
                 post<toys, ToyModel>("create".responds(created<ToyModel>())) { _, _ -> }
-                get<toys>("all".responds(
-                    ok<ToysModel>(),
-                    notFound()
-                )) { }
+                get<toys>(
+                    "all".responds(
+                        ok<ToysModel>(),
+                        notFound()
+                    )
+                ) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
 

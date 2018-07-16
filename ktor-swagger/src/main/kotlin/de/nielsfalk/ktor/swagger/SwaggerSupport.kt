@@ -2,12 +2,11 @@ package de.nielsfalk.ktor.swagger
 
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.Group
+import de.nielsfalk.ktor.swagger.version.shared.ModelName
 import de.nielsfalk.ktor.swagger.version.shared.Operation
 import de.nielsfalk.ktor.swagger.version.shared.Parameter
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
-import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
-import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
@@ -25,6 +24,8 @@ import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
+import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
+import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
 class SwaggerSupport(
     val swagger: Swagger?,
@@ -43,8 +44,10 @@ class SwaggerSupport(
                 val ui = if (provideUi) SwaggerUi() else null
                 get("/$path/{fileName}") {
                     val filename = call.parameters["fileName"]
-                    if (filename == "swagger.json") {
-                        call.respond(feature.common)
+                    if (filename == "swagger.json" && swagger != null) {
+                        call.respond(swagger)
+                    } else if (filename == "openAPI.json" && openApi != null) {
+                        call.respond(openApi)
                     } else {
                         ui?.serve(filename, call)
                     }
@@ -63,24 +66,17 @@ class SwaggerSupport(
         }
     }
 
-    val common: CommonBase =
-        swagger ?: openApi ?: throw IllegalArgumentException("Neither `swagger` or `openApi` specified.")
+    val commons: Collection<CommonBase> =
+        listOf(swagger, openApi).filterNotNull()
 
-    fun <R> commonVersioned(
-        swaggerHandler: Swagger.() -> R,
-        openApiHandler: OpenApi.() -> R
-    ): R =
-        when (common) {
-            is Swagger -> common.swaggerHandler()
-            is OpenApi -> common.openApiHandler()
-            else -> throw IllegalStateException("Must be of type ${Swagger::class.simpleName} or ${OpenApi::class.simpleName}")
+    private val variations: Collection<BaseWithVariation<out CommonBase>>
+        get() = commons.map {
+            when (it) {
+                is Swagger -> SwaggerBaseWithVariation(it, SpecVariation("#/definitions/", ResponseV2))
+                is OpenApi -> OpenApiBaseWithVariation(it, SpecVariation("#/components/schemas/", ResponseV3))
+                else -> throw IllegalStateException("Must be of type ${Swagger::class.simpleName} or ${OpenApi::class.simpleName}")
+            }
         }
-
-    private val variation: SpecVariation
-        get() = commonVersioned(
-            { SpecVariation("#/definitions/", ResponseV2) },
-            { SpecVariation("#/components/schemas/", ResponseV3) }
-        )
 
     /**
      * The [HttpMethod] types that don't support having a HTTP body element.
@@ -111,10 +107,69 @@ class SwaggerSupport(
         val location = clazz.getAnnotation(Location::class.java)
         val tags = clazz.getAnnotation(Group::class.java)
 
-        applyOperations(location, tags, method, locationClass, bodyType)
+        variations.forEach {
+            it.apply {
+                applyOperations(location, tags, method, locationClass, bodyType)
+            }
+        }
+    }
+}
+
+private class SwaggerBaseWithVariation(
+    base: Swagger,
+    variation: SpecVariation
+) : BaseWithVariation<Swagger>(base, variation) {
+
+    override val schemaHolder: MutableMap<ModelName, Any>
+        get() = base.definitions
+
+    override fun addDefinition(name: String, schema: Any) {
+        base.definitions.putIfAbsent(name, schema)
+    }
+}
+
+private class OpenApiBaseWithVariation(
+    base: OpenApi,
+    variation: SpecVariation
+) : BaseWithVariation<OpenApi>(base, variation) {
+    override val schemaHolder: MutableMap<ModelName, Any>
+        get() = base.components.schemas
+
+    override fun addDefinition(name: String, schema: Any) {
+        base.components.schemas.putIfAbsent(name, schema)
+    }
+}
+
+private abstract class BaseWithVariation<B : CommonBase>(
+    val base: B,
+    val variation: SpecVariation
+) {
+    abstract val schemaHolder: MutableMap<ModelName, Any>
+
+    abstract fun addDefinition(name: String, schema: Any)
+
+    fun addDefinition(typeInfo: TypeInfo) {
+        if (typeInfo.type != Unit::class) {
+            val accruedNewDefinitions = mutableListOf<TypeInfo>()
+            schemaHolder
+                .computeIfAbsent(typeInfo.modelName()) {
+                    val modelWithAdditionalDefinitions = variation {
+                        createModelData(typeInfo)
+                    }
+                    accruedNewDefinitions.addAll(modelWithAdditionalDefinitions.second)
+                    modelWithAdditionalDefinitions.first
+                }
+
+            accruedNewDefinitions.forEach { addDefinition(it) }
+        }
     }
 
-    private fun <LOCATION : Any> Metadata.applyOperations(
+    fun addDefinitions(kClasses: Collection<TypeInfo>) =
+        kClasses.forEach {
+            addDefinition(it)
+        }
+
+    fun <LOCATION : Any> Metadata.applyOperations(
         location: Location,
         group: Group?,
         method: HttpMethod,
@@ -123,7 +178,7 @@ class SwaggerSupport(
     ) {
 
         when (bodyType) {
-            is BodyFromSchema -> addDefintion(bodyType.name, bodyType.schema)
+            is BodyFromSchema -> addDefinition(bodyType.name, bodyType.schema)
             is BodyFromReflection -> bodyType.typeInfo.let { typeInfo ->
                 if (typeInfo.type != Unit::class) {
                     addDefinition(typeInfo)
@@ -139,7 +194,7 @@ class SwaggerSupport(
                         variation.reponseCreator.create(status, type.type)
                     }
                     is ResponseSchema -> {
-                        addDefintion(type.name, type.schema)
+                        addDefinition(type.name, type.schema)
                         variation.reponseCreator.create(type.name)
                     }
                 }
@@ -187,43 +242,13 @@ class SwaggerSupport(
             )
         }
 
-        common.paths
+        base.paths
             .getOrPut(location.path) { mutableMapOf() }
             .put(
                 method.value.toLowerCase(),
                 createOperation()
             )
     }
-
-    private fun addDefintion(name: String, schema: Any) {
-        commonVersioned(
-            { definitions.putIfAbsent(name, schema) },
-            { components.schemas.putIfAbsent(name, schema) }
-        )
-    }
-
-    private fun addDefinition(typeInfo: TypeInfo) {
-        if (typeInfo.type != Unit::class) {
-            val accruedNewDefinitions = mutableListOf<TypeInfo>()
-            commonVersioned(
-                { definitions },
-                { components.schemas })
-                .computeIfAbsent(typeInfo.modelName()) {
-                    val modelWithAdditionalDefinitions = variation {
-                        createModelData(typeInfo)
-                    }
-                    accruedNewDefinitions.addAll(modelWithAdditionalDefinitions.second)
-                    modelWithAdditionalDefinitions.first
-                }
-
-            accruedNewDefinitions.forEach { addDefinition(it) }
-        }
-    }
-
-    private fun addDefinitions(kClasses: Collection<TypeInfo>) =
-        kClasses.forEach {
-            addDefinition(it)
-        }
 }
 
 data class SwaggerUiConfiguration(

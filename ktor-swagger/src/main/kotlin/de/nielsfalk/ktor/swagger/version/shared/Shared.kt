@@ -76,11 +76,23 @@ class Parameter(
     val `in`: ParameterInputType,
     val description: String?,
     val required: Boolean,
+    /**
+     * Not supported in OpenAPI v3.
+     */
     val type: String? = null,
+    /**
+     * Not supported in OpenAPI v3.
+     */
     val format: String? = null,
+    /**
+     * Not supported in OpenAPI v3.
+     */
     val enum: List<String>? = null,
+    /**
+     * Not supported in OpenAPI v3.
+     */
     val items: Property? = null,
-    val schema: ModelReference? = null
+    val schema: Any? = null
 ) {
     companion object {
         fun create(
@@ -116,7 +128,13 @@ interface ResponseCreator {
 }
 
 enum class ParameterInputType {
-    query, path, body, header
+    query,
+    path,
+    /**
+     * Not supported in OpenAPI v3.
+     */
+    body,
+    header
 }
 
 data class Property(
