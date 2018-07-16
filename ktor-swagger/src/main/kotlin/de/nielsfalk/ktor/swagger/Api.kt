@@ -37,12 +37,11 @@ fun Metadata.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadat
     copy(responses = (responses + mapOf(*pairs)))
 
 /**
- * Defines the schema for the body of the message of the incoming JSON object.
+ * Defines the schema reference name for the body of the message of the incoming JSON object.
  */
 data class BodySchema
 internal constructor(
-    internal val name: ModelName?,
-    internal val schema: Any
+    internal val name: ModelName?
 )
 
 /**
@@ -50,23 +49,23 @@ internal constructor(
  * @param name The model name to use in the Swagger Schema.
  * @receiver The summary to use for the operation.
  */
-fun String.body(name: ModelName?, bodySchema: Any): Metadata =
-    Metadata(bodySchema = BodySchema(name, bodySchema), summary = this)
+fun String.noReflectionBody(name: ModelName?): Metadata =
+    Metadata(bodySchema = BodySchema(name), summary = this)
 
-fun body(name: ModelName?, bodySchema: Any): Metadata =
-    Metadata(bodySchema = BodySchema(name, bodySchema))
+fun noReflectionBody(name: ModelName?): Metadata =
+    Metadata(bodySchema = BodySchema(name))
 
 /**
  * Define a custom schema for the body of the HTTP request.
  * The name will be infered from the reified `ENTITY` type.
  * @receiver The summary to use for the operation.
  */
-@JvmName("descriptionBody")
-fun String.body(bodySchema: Any) =
-    body(null, bodySchema)
+@JvmName("noReflectionBodyReciverIsSummary")
+fun String.noReflectionBody() =
+    noReflectionBody(null)
 
-fun body(bodySchema: Any): Metadata =
-    body(null, bodySchema)
+fun noReflectionBody(): Metadata =
+    noReflectionBody(null)
 
 /**
  * @receiver The summary to use for the operation.
@@ -80,7 +79,7 @@ fun responds(vararg pairs: Pair<HttpStatusCode, ResponseType>) =
 sealed class ResponseType
 
 data class ResponseFromReflection(val type: TypeInfo) : ResponseType()
-data class ResponseSchema(val name: ModelName, val schema: Any) : ResponseType()
+data class ResponseSchema(val name: ModelName) : ResponseType()
 
 /**
  * The type of the operation body being recived by the server.
@@ -88,20 +87,19 @@ data class ResponseSchema(val name: ModelName, val schema: Any) : ResponseType()
 sealed class BodyType
 
 data class BodyFromReflection(val typeInfo: TypeInfo) : BodyType()
-data class BodyFromSchema(val name: ModelName, val schema: Any) : BodyType()
+data class BodyFromSchema(val name: ModelName) : BodyType()
 
 inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(
     typeInfo<T>()
 )
 
-fun ok(name: String, schema: Any) = OK to ResponseSchema(name, schema)
+fun ok(name: String) = OK to ResponseSchema(name)
 inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(
     typeInfo<T>()
 )
 
-fun created(name: String, schema: Any): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(
-    name,
-    schema
+fun created(name: String): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(
+    name
 )
 
 inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(

@@ -2,6 +2,7 @@ package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
 import de.nielsfalk.ktor.swagger.version.shared.Property
+import de.nielsfalk.ktor.swagger.version.v2.Operation
 import de.nielsfalk.ktor.swagger.version.v2.Response
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
@@ -14,7 +15,8 @@ import kotlin.test.assertEquals
 class ModelExtractionTest {
     private val variation = SpecVariation(
         "#/definitions/",
-        Response
+        Response,
+        Operation
     )
 
     private fun createModelData(typeInfo: TypeInfo) =

@@ -3,7 +3,7 @@ package de.nielsfalk.ktor.swagger
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
-import de.nielsfalk.ktor.swagger.version.shared.Operation
+import de.nielsfalk.ktor.swagger.version.shared.OperationBase
 import de.nielsfalk.ktor.swagger.version.shared.Parameter
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
@@ -24,7 +24,9 @@ import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
+import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
+import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
 import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
 class SwaggerSupport(
@@ -46,7 +48,7 @@ class SwaggerSupport(
                     val filename = call.parameters["fileName"]
                     if (filename == "swagger.json" && swagger != null) {
                         call.respond(swagger)
-                    } else if (filename == "openAPI.json" && openApi != null) {
+                    } else if (filename == "openapi.json" && openApi != null) {
                         call.respond(openApi)
                     } else {
                         ui?.serve(filename, call)
@@ -72,8 +74,14 @@ class SwaggerSupport(
     private val variations: Collection<BaseWithVariation<out CommonBase>>
         get() = commons.map {
             when (it) {
-                is Swagger -> SwaggerBaseWithVariation(it, SpecVariation("#/definitions/", ResponseV2))
-                is OpenApi -> OpenApiBaseWithVariation(it, SpecVariation("#/components/schemas/", ResponseV3))
+                is Swagger -> SwaggerBaseWithVariation(
+                    it,
+                    SpecVariation("#/definitions/", ResponseV2, OperationV2)
+                )
+                is OpenApi -> OpenApiBaseWithVariation(
+                    it,
+                    SpecVariation("#/components/schemas/", ResponseV3, OperationV3)
+                )
                 else -> throw IllegalStateException("Must be of type ${Swagger::class.simpleName} or ${OpenApi::class.simpleName}")
             }
         }
@@ -90,8 +98,7 @@ class SwaggerSupport(
     private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
         bodySchema?.let {
             BodyFromSchema(
-                name = bodySchema.name ?: typeInfo.modelName(),
-                schema = bodySchema.schema
+                name = bodySchema.name ?: typeInfo.modelName()
             )
         } ?: BodyFromReflection(typeInfo)
 
@@ -178,7 +185,6 @@ private abstract class BaseWithVariation<B : CommonBase>(
     ) {
 
         when (bodyType) {
-            is BodyFromSchema -> addDefinition(bodyType.name, bodyType.schema)
             is BodyFromReflection -> bodyType.typeInfo.let { typeInfo ->
                 if (typeInfo.type != Unit::class) {
                     addDefinition(typeInfo)
@@ -186,7 +192,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
             }
         }
 
-        fun createOperation(): Operation {
+        fun createOperation(): OperationBase {
             val responses = responses.map { (status, type) ->
                 val response = when (type) {
                     is ResponseFromReflection -> {
@@ -194,7 +200,6 @@ private abstract class BaseWithVariation<B : CommonBase>(
                         variation.reponseCreator.create(status, type.type)
                     }
                     is ResponseSchema -> {
-                        addDefinition(type.name, type.schema)
                         variation.reponseCreator.create(type.name)
                     }
                 }
@@ -232,7 +237,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 }
             }
 
-            return Operation.create(
+            return variation.operationCreator.create(
                 this,
                 responses,
                 parameters,

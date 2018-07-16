@@ -85,12 +85,14 @@ class SwaggerSupportTest {
         }
         application.install(SwaggerSupport) {
             forwardRoot = true
-            swagger = Swagger()
+            swagger = Swagger().apply {
+                definitions["Model"] = mapOf("type" to "object")
+            }
         }
         application.install(Locations)
 
         application.routing {
-            put<modelRoute, Model>(body(mapOf("type" to "object"))) { _, _ -> }
+            put<modelRoute, Model>(noReflectionBody()) { _, _ -> }
         }
 
         // then

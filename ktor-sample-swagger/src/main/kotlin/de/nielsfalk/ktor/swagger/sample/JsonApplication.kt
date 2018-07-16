@@ -17,6 +17,7 @@ import de.nielsfalk.ktor.swagger.ok
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
 import de.nielsfalk.ktor.swagger.responds
+import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
@@ -51,11 +52,11 @@ val sizeSchemaMap = mapOf(
     "minimum" to 0
 )
 
-val rectangleSchemaMap = mapOf(
+fun rectangleSchemaMap(refBase: String) = mapOf(
     "type" to "object",
     "properties" to mapOf(
-        "a" to mapOf("${'$'}ref" to "#/definitions/size"),
-        "b" to mapOf("${'$'}ref" to "#/definitions/size")
+        "a" to mapOf("${'$'}ref" to "$refBase/size"),
+        "b" to mapOf("${'$'}ref" to "$refBase/size")
     )
 )
 
@@ -127,18 +128,26 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
         install(Locations)
         install(SwaggerSupport) {
             forwardRoot = true
-            openApi = OpenApi().apply {
-                info = Information(
-                    version = "0.1",
-                    title = "sample api implemented in ktor",
-                    description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
-                    contact = Contact(
-                        name = "Niels Falk",
-                        url = "https://nielsfalk.de"
-                    )
+            val information = Information(
+                version = "0.1",
+                title = "sample api implemented in ktor",
+                description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
+                contact = Contact(
+                    name = "Niels Falk",
+                    url = "https://nielsfalk.de"
                 )
+            )
+            swagger = Swagger().apply {
+                info = information
+                definitions["size"] = sizeSchemaMap
+                definitions[petUuid] = petIdSchema
+                definitions["Rectangle"] = rectangleSchemaMap("#/definitions")
+            }
+            openApi = OpenApi().apply {
+                info = information
                 components.schemas["size"] = sizeSchemaMap
                 components.schemas[petUuid] = petIdSchema
+                components.schemas["Rectangle"] = rectangleSchemaMap("#/components/schemas")
             }
         }
         routing {
@@ -177,10 +186,7 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                 }
             }
             get<shapes>("all".responds(
-                ok(
-                    "Rectangle",
-                    rectangleSchemaMap
-                )
+                ok("Rectangle")
             )) {
                 call.respondText("""
                     {

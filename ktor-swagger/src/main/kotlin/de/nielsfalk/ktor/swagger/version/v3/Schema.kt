@@ -3,11 +3,17 @@ package de.nielsfalk.ktor.swagger.version.v3
 import de.nielsfalk.ktor.swagger.modelName
 import de.nielsfalk.ktor.swagger.responseDescription
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
+import de.nielsfalk.ktor.swagger.version.shared.HttpStatus
 import de.nielsfalk.ktor.swagger.version.shared.Information
 import de.nielsfalk.ktor.swagger.version.shared.ModelReference
+import de.nielsfalk.ktor.swagger.version.shared.OperationBase
+import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
+import de.nielsfalk.ktor.swagger.version.shared.Parameter
+import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.Paths
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
+import de.nielsfalk.ktor.swagger.version.shared.Tag
 import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpStatusCode
 
@@ -37,7 +43,7 @@ class Components {
 
     val responses: Responses = mutableMapOf()
 
-    val paramers: Parameters = mutableMapOf()
+    val parameters: Parameters = mutableMapOf()
 
     val examples: Examples = mutableMapOf()
 
@@ -83,6 +89,62 @@ class Response(
 
 class SchemaModelReference(
     val schema: ModelReference
+)
+
+class Operation(
+    override val responses: Map<HttpStatus, ResponseBase>,
+    override val parameters: List<Parameter>,
+    override val tags: List<Tag>?,
+    override val summary: String,
+    val requestBody: RequestBody?
+) : OperationBase {
+
+    companion object : OperationCreator {
+        override fun create(
+            responses: Map<HttpStatus, ResponseBase>,
+            parameters: List<Parameter>,
+            tags: List<Tag>?,
+            summary: String
+        ): OperationBase {
+            val bodyParams =
+                parameters
+                    .filter { it.`in` == ParameterInputType.body }
+
+            assert(bodyParams.size < 2) {
+                "Should not be more than 1 noReflectionBody parameter."
+            }
+
+            val parametersToUse =
+                parameters
+                    .filter { it.`in` != ParameterInputType.body }
+
+            val requestBody: RequestBody? =
+                bodyParams.firstOrNull()?.let {
+                val content = mapOf(
+                    "application/json" to SchemaModelReference(
+                        ModelReference(
+                            `$ref` = it.schema!!.`$ref`
+                        )
+                    )
+                )
+                RequestBody(
+                    content = content
+                )
+            }
+
+            return Operation(
+                responses,
+                parametersToUse,
+                tags,
+                summary,
+                requestBody = requestBody
+            )
+        }
+    }
+}
+
+class RequestBody(
+    val content: Content
 )
 
 @Target(AnnotationTarget.PROPERTY)

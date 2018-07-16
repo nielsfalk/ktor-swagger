@@ -13,7 +13,7 @@ typealias Path = String
 typealias Paths = MutableMap<Path, Methods>
 typealias MethodName = String
 typealias HttpStatus = String
-typealias Methods = MutableMap<MethodName, Operation>
+typealias Methods = MutableMap<MethodName, OperationBase>
 
 interface CommonBase {
     val info: Information?
@@ -37,32 +37,38 @@ class Contact(
     val email: String? = null
 )
 
-class Operation(
-    val responses: Map<HttpStatus, ResponseBase>,
-    val parameters: List<Parameter>,
-    val tags: List<Tag>?,
+interface OperationBase {
+    val responses: Map<HttpStatus, ResponseBase>
+    val parameters: List<Parameter>
+    val tags: List<Tag>?
     val summary: String
-) {
+}
 
-    companion object {
-        fun create(
-            metadata: Metadata,
-            responses: Map<HttpStatus, ResponseBase>,
-            parameters: List<Parameter>,
-            location: Location,
-            group: Group?,
-            method: HttpMethod
-        ): Operation {
-            val tags = group?.toList()
-            val summary = metadata.summary ?: "${method.value} ${location.path}"
-            return Operation(
-                responses,
-                parameters,
-                tags,
-                summary
-            )
-        }
+interface OperationCreator {
+    fun create(
+        metadata: Metadata,
+        responses: Map<HttpStatus, ResponseBase>,
+        parameters: List<Parameter>,
+        location: Location,
+        group: Group?,
+        method: HttpMethod
+    ): OperationBase {
+        val tags = group?.toList()
+        val summary = metadata.summary ?: "${method.value} ${location.path}"
+        return create(
+            responses,
+            parameters,
+            tags,
+            summary
+        )
     }
+
+    fun create(
+        responses: Map<HttpStatus, ResponseBase>,
+        parameters: List<Parameter>,
+        tags: List<Tag>?,
+        summary: String
+    ): OperationBase
 }
 
 class ModelReference(val `$ref`: String) {
@@ -92,7 +98,7 @@ class Parameter(
      * Not supported in OpenAPI v3.
      */
     val items: Property? = null,
-    val schema: Any? = null
+    val schema: ModelReference? = null
 ) {
     companion object {
         fun create(

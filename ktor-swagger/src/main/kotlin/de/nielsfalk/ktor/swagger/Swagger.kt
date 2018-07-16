@@ -4,6 +4,7 @@ package de.nielsfalk.ktor.swagger
 
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
+import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
 import de.nielsfalk.ktor.swagger.version.shared.Parameter
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType.body
@@ -48,7 +49,8 @@ fun Group.toList(): List<Tag> {
 
 class SpecVariation(
     internal val modelRoot: String,
-    internal val reponseCreator: ResponseCreator
+    internal val reponseCreator: ResponseCreator,
+    internal val operationCreator: OperationCreator
 ) {
     operator fun <R> invoke(use: SpecVariation.() -> R): R =
         this.use()
@@ -86,14 +88,14 @@ class SpecVariation(
             is BodyFromReflection ->
                 Parameter.create(
                     typeInfo.referenceProperty(),
-                    name = "body",
+                    name = "noReflectionBody",
                     description = typeInfo.modelName(),
                     `in` = body
                 )
             is BodyFromSchema ->
                 Parameter.create(
                     referenceProperty(),
-                    name = "body",
+                    name = "noReflectionBody",
                     description = name,
                     `in` = body
                 )
