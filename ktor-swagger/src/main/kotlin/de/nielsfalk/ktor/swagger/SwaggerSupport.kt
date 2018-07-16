@@ -34,6 +34,9 @@ class SwaggerSupport(
     val openApi: OpenApi?
 ) {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
+        private val openApiJsonFileName = "openapi.json"
+        private val swaggerJsonFileName = "swagger.json"
+
         override val key = AttributeKey<SwaggerSupport>("SwaggerSupport")
 
         override fun install(pipeline: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
@@ -46,25 +49,30 @@ class SwaggerSupport(
                 val ui = if (provideUi) SwaggerUi() else null
                 get("/$path/{fileName}") {
                     val filename = call.parameters["fileName"]
-                    if (filename == "swagger.json" && swagger != null) {
+                    if (filename == swaggerJsonFileName && swagger != null) {
                         call.respond(swagger)
-                    } else if (filename == "openapi.json" && openApi != null) {
+                    } else if (filename == openApiJsonFileName && openApi != null) {
                         call.respond(openApi)
                     } else {
                         ui?.serve(filename, call)
                     }
                 }
                 if (forwardRoot) {
+                    val defaultJsonFile = when {
+                        openApi != null -> openApiJsonFileName
+                        swagger != null -> swaggerJsonFileName
+                        else -> throw IllegalArgumentException("Swagger or OpenApi must be specified for `forwardRoot`.")
+                    }
                     get("/") {
-                        redirect(path)
+                        redirect(path, defaultJsonFile)
                     }
                 }
             }
             return feature
         }
 
-        private suspend fun PipelineContext<Unit, ApplicationCall>.redirect(path: String) {
-            call.respondRedirect("/$path/index.html?url=swagger.json")
+        private suspend fun PipelineContext<Unit, ApplicationCall>.redirect(path: String, defaultJsonFile: String) {
+            call.respondRedirect("/$path/index.html?url=$defaultJsonFile")
         }
     }
 

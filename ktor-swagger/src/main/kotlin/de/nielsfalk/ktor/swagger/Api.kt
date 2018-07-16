@@ -111,7 +111,7 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
-    application.swagger.apply {
+    application.swaggerUi.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
     }
 
@@ -125,7 +125,7 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
-    application.swagger.apply {
+    application.swaggerUi.apply {
         metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
     }
     return put<LOCATION> {
@@ -138,7 +138,7 @@ inline fun <reified LOCATION : Any> Route.get(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
 ): Route {
-    application.swagger.apply {
+    application.swaggerUi.apply {
         metadata.apply<LOCATION, Unit>(HttpMethod.Get)
     }
     return get(body)
@@ -149,7 +149,7 @@ inline fun <reified LOCATION : Any> Route.delete(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
 ): Route {
-    application.swagger.apply {
+    application.swaggerUi.apply {
         metadata.apply<LOCATION, Unit>(HttpMethod.Delete)
     }
     return delete(body)

@@ -78,8 +78,8 @@ class SwaggerManualSchemaTest {
             }
         }) {
             application.routing(configuration)
-            this@SwaggerManualSchemaTest.swagger = application.swagger.swagger!!
-            this@SwaggerManualSchemaTest.openApi = application.swagger.openApi!!
+            this@SwaggerManualSchemaTest.swagger = application.swaggerUi.swagger!!
+            this@SwaggerManualSchemaTest.openApi = application.swaggerUi.openApi!!
         }
     }
 

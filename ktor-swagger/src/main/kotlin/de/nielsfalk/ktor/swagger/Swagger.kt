@@ -34,20 +34,20 @@ import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 
 /**
- * Gets the [Application.swagger] feature
+ * Gets the [Application.swaggerUi] feature
  */
-val ApplicationCall.swagger get() = application.swagger
+val ApplicationCall.swaggerUi get() = application.swaggerUi
 
 /**
- * Gets the [Application.swagger] feature
+ * Gets the [Application.swaggerUi] feature
  */
-val Application.swagger get() = feature(SwaggerSupport)
+val Application.swaggerUi get() = feature(SwaggerSupport)
 
 fun Group.toList(): List<Tag> {
     return listOf(Tag(name))
 }
 
-class SpecVariation(
+internal class SpecVariation(
     internal val modelRoot: String,
     internal val reponseCreator: ResponseCreator,
     internal val operationCreator: OperationCreator

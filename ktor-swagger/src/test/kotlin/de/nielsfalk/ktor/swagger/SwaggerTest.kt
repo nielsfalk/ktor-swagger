@@ -67,7 +67,7 @@ class SwaggerTest {
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
 
-            this@SwaggerTest.swagger = application.swagger.swagger!!
+            this@SwaggerTest.swagger = application.swaggerUi.swagger!!
         }
     }
 
