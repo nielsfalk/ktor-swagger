@@ -5,7 +5,9 @@ import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.Operation
 import de.nielsfalk.ktor.swagger.version.shared.Parameter
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
+import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
+import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
@@ -76,9 +78,9 @@ class SwaggerSupport(
 
     private val variation: SpecVariation
         get() = commonVersioned(
-            { "#/definitions/" },
-            { "#/components/schemas/" }
-        ).let { SpecVariation(it) }
+            { SpecVariation("#/definitions/", ResponseV2) },
+            { SpecVariation("#/components/schemas/", ResponseV3) }
+        )
 
     /**
      * The [HttpMethod] types that don't support having a HTTP body element.
@@ -134,11 +136,11 @@ class SwaggerSupport(
                 val response = when (type) {
                     is ResponseFromReflection -> {
                         addDefinition(type.type)
-                        Response.create(variation, status, type.type)
+                        variation.reponseCreator.create(status, type.type)
                     }
                     is ResponseSchema -> {
                         addDefintion(type.name, type.schema)
-                        Response.create(variation, type.name)
+                        variation.reponseCreator.create(type.name)
                     }
                 }
 

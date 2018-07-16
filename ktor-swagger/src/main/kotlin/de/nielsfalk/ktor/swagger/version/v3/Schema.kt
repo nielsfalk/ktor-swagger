@@ -1,8 +1,15 @@
 package de.nielsfalk.ktor.swagger.version.v3
 
+import de.nielsfalk.ktor.swagger.modelName
+import de.nielsfalk.ktor.swagger.responseDescription
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.Information
+import de.nielsfalk.ktor.swagger.version.shared.ModelReference
 import de.nielsfalk.ktor.swagger.version.shared.Paths
+import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
+import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
+import io.ktor.client.call.TypeInfo
+import io.ktor.http.HttpStatusCode
 
 typealias Schemas = MutableMap<String, Any>
 typealias Responses = MutableMap<String, Any>
@@ -13,6 +20,8 @@ typealias Headers = MutableMap<String, Any>
 typealias SecuritySchemes = MutableMap<String, Any>
 typealias Links = MutableMap<String, Any>
 typealias Callbacks = MutableMap<String, Any>
+
+typealias Content = Map<String, SchemaModelReference>
 
 class OpenApi : CommonBase {
     val openapi: String = "3.0.0"
@@ -42,6 +51,39 @@ class Components {
 
     val callbacks: Callbacks = mutableMapOf()
 }
+
+class Response(
+    override val description: String,
+    val content: Content?
+) : ResponseBase {
+
+    companion object : ResponseCreator {
+        override fun create(httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): Response {
+            val jsonContent = if (typeInfo.type == Unit::class) null else ModelReference.create(
+                "#/components/schemas/" + typeInfo.modelName()
+            )
+            val content = jsonContent?.let { mapOf("application/json" to SchemaModelReference(it)) }
+            return Response(
+                description = if (typeInfo.type == Unit::class) httpStatusCode.description else typeInfo.responseDescription(),
+                content = content
+            )
+        }
+
+        override fun create(modelName: String): Response {
+            return Response(
+                description = modelName,
+                content = mapOf(
+                    "application/json" to
+                        SchemaModelReference(ModelReference.create("#/components/schemas/" + modelName))
+                )
+            )
+        }
+    }
+}
+
+class SchemaModelReference(
+    val schema: ModelReference
+)
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class Schema(val schema: String)

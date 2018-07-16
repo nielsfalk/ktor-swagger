@@ -6,6 +6,7 @@ import com.winterbe.expekt.should
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.Property
+import de.nielsfalk.ktor.swagger.version.v2.Response
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import io.ktor.application.install
 import io.ktor.locations.Location
@@ -76,7 +77,7 @@ class SwaggerTest {
         val responses = swagger.paths.get(toysLocation)?.get("put")?.responses
 
         responses?.keys.should.contain("404")
-        responses?.get("200")?.schema?.`$ref`.should.equal("#/definitions/ToyModel")
+        (responses?.get("200") as Response).schema?.`$ref`.should.equal("#/definitions/ToyModel")
     }
 
     @Test

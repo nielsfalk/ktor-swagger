@@ -1,9 +1,10 @@
 package de.nielsfalk.ktor.swagger.version.shared
 
 import de.nielsfalk.ktor.swagger.Metadata
-import de.nielsfalk.ktor.swagger.Response
 import de.nielsfalk.ktor.swagger.toList
+import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Location
 
 typealias ModelName = String
@@ -37,7 +38,7 @@ class Contact(
 )
 
 class Operation(
-    val responses: Map<HttpStatus, Response>,
+    val responses: Map<HttpStatus, ResponseBase>,
     val parameters: List<Parameter>,
     val tags: List<Tag>?,
     val summary: String
@@ -46,7 +47,7 @@ class Operation(
     companion object {
         fun create(
             metadata: Metadata,
-            responses: Map<HttpStatus, Response>,
+            responses: Map<HttpStatus, ResponseBase>,
             parameters: List<Parameter>,
             location: Location,
             group: Group?,
@@ -102,6 +103,16 @@ class Parameter(
             )
         }
     }
+}
+
+interface ResponseBase {
+    val description: String
+}
+
+interface ResponseCreator {
+    fun create(httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): ResponseBase
+
+    fun create(modelName: String): ResponseBase
 }
 
 enum class ParameterInputType {

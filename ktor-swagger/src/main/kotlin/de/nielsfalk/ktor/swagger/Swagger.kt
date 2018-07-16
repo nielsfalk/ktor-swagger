@@ -4,20 +4,19 @@ package de.nielsfalk.ktor.swagger
 
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
-import de.nielsfalk.ktor.swagger.version.shared.ModelReference
 import de.nielsfalk.ktor.swagger.version.shared.Parameter
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType.body
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType.query
 import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.shared.PropertyName
+import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
 import de.nielsfalk.ktor.swagger.version.shared.Tag
 import de.nielsfalk.ktor.swagger.version.v3.Schema
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
 import io.ktor.application.feature
 import io.ktor.client.call.TypeInfo
-import io.ktor.http.HttpStatusCode
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
@@ -48,7 +47,8 @@ fun Group.toList(): List<Tag> {
 }
 
 class SpecVariation(
-    internal val modelRoot: String
+    internal val modelRoot: String,
+    internal val reponseCreator: ResponseCreator
 ) {
     operator fun <R> invoke(use: SpecVariation.() -> R): R =
         this.use()
@@ -219,30 +219,6 @@ class SpecVariation(
             description = modelName(),
             type = null
         )
-}
-
-class Response(
-    val description: String,
-    val schema: ModelReference?
-) {
-
-    companion object {
-        fun create(specVariation: SpecVariation, httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): Response {
-            return Response(
-                description = if (typeInfo.type == Unit::class) httpStatusCode.description else typeInfo.responseDescription(),
-                schema = if (typeInfo.type == Unit::class) null else ModelReference.create(
-                    specVariation.modelRoot + typeInfo.modelName()
-                )
-            )
-        }
-
-        fun create(specVariation: SpecVariation, modelName: String): Response {
-            return Response(
-                description = modelName,
-                schema = ModelReference.create(specVariation.modelRoot + modelName)
-            )
-        }
-    }
 }
 
 fun TypeInfo.responseDescription(): String = modelName()

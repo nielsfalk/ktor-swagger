@@ -2,6 +2,7 @@ package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
+import de.nielsfalk.ktor.swagger.version.v2.Response
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import io.ktor.application.install
 import io.ktor.locations.Location
@@ -95,7 +96,7 @@ class SwaggerManualSchemaTest {
             operation.parameters.find { it.`in` == ParameterInputType.body }
                 ?.schema?.`$ref`.should.equal("#/definitions/Rectangle")
             operation.responses.keys.should.contain("201")
-            operation.responses["201"]?.schema?.`$ref`.should.equal("#/definitions/Rectangles")
+            (operation.responses["201"] as Response).schema?.`$ref`.should.equal("#/definitions/Rectangles")
         }
     }
 
