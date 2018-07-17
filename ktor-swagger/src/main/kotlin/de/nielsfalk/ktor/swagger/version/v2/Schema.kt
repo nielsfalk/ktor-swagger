@@ -9,8 +9,11 @@ import de.nielsfalk.ktor.swagger.version.shared.ModelName
 import de.nielsfalk.ktor.swagger.version.shared.ModelReference
 import de.nielsfalk.ktor.swagger.version.shared.OperationBase
 import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
-import de.nielsfalk.ktor.swagger.version.shared.Parameter
+import de.nielsfalk.ktor.swagger.version.shared.ParameterBase
+import de.nielsfalk.ktor.swagger.version.shared.ParameterCreator
+import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.Paths
+import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
 import de.nielsfalk.ktor.swagger.version.shared.Tag
@@ -60,7 +63,7 @@ class Response(
 
 class Operation(
     override val responses: Map<HttpStatus, ResponseBase>,
-    override val parameters: List<Parameter>,
+    override val parameters: List<ParameterBase>,
     override val tags: List<Tag>?,
     override val summary: String
 ) : OperationBase {
@@ -68,7 +71,7 @@ class Operation(
     companion object : OperationCreator {
         override fun create(
             responses: Map<HttpStatus, ResponseBase>,
-            parameters: List<Parameter>,
+            parameters: List<ParameterBase>,
             tags: List<Tag>?,
             summary: String,
             examples: Map<String, Example>
@@ -78,6 +81,42 @@ class Operation(
                 parameters,
                 tags,
                 summary
+            )
+        }
+    }
+}
+
+class Parameter(
+    override val name: String,
+    override val `in`: ParameterInputType,
+    override val description: String?,
+    override val required: Boolean,
+    val type: String? = null,
+    val format: String? = null,
+    val enum: List<String>? = null,
+    val items: Property? = null,
+    val schema: ModelReference? = null
+) : ParameterBase {
+    companion object : ParameterCreator {
+
+        override fun create(
+            property: Property,
+            name: String,
+            `in`: ParameterInputType,
+            description: String?,
+            required: Boolean,
+            examples: Map<String, Example>
+        ): Parameter {
+            return Parameter(
+                name = name,
+                `in` = `in`,
+                description = description,
+                required = required,
+                type = property.type,
+                format = property.format,
+                enum = property.enum,
+                items = property.items,
+                schema = property.`$ref`?.let { ModelReference(it) }
             )
         }
     }

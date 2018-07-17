@@ -40,7 +40,7 @@ class Contact(
 
 interface OperationBase {
     val responses: Map<HttpStatus, ResponseBase>
-    val parameters: List<Parameter>
+    val parameters: List<ParameterBase>
     val tags: List<Tag>?
     val summary: String
 }
@@ -49,7 +49,7 @@ interface OperationCreator {
     fun create(
         metadata: Metadata,
         responses: Map<HttpStatus, ResponseBase>,
-        parameters: List<Parameter>,
+        parameters: List<ParameterBase>,
         location: Location,
         group: Group?,
         method: HttpMethod,
@@ -68,7 +68,7 @@ interface OperationCreator {
 
     fun create(
         responses: Map<HttpStatus, ResponseBase>,
-        parameters: List<Parameter>,
+        parameters: List<ParameterBase>,
         tags: List<Tag>?,
         summary: String,
         examples: Map<String, Example>
@@ -81,50 +81,22 @@ class ModelReference(val `$ref`: String) {
     }
 }
 
-class Parameter(
-    val name: String,
-    val `in`: ParameterInputType,
-    val description: String?,
-    val required: Boolean,
-    /**
-     * Not supported in OpenAPI v3.
-     */
-    val type: String? = null,
-    /**
-     * Not supported in OpenAPI v3.
-     */
-    val format: String? = null,
-    /**
-     * Not supported in OpenAPI v3.
-     */
-    val enum: List<String>? = null,
-    /**
-     * Not supported in OpenAPI v3.
-     */
-    val items: Property? = null,
-    val schema: ModelReference? = null
-) {
-    companion object {
-        fun create(
-            property: Property,
-            name: String,
-            `in`: ParameterInputType,
-            description: String? = property.description ?: name,
-            required: Boolean = true
-        ): Parameter {
-            return Parameter(
-                name = name,
-                `in` = `in`,
-                description = description,
-                required = required,
-                type = property.type,
-                format = property.format,
-                enum = property.enum,
-                items = property.items,
-                schema = property.`$ref`?.let { ModelReference(it) }
-            )
-        }
-    }
+interface ParameterBase {
+    val name: String
+    val `in`: ParameterInputType
+    val description: String?
+    val required: Boolean
+}
+
+interface ParameterCreator {
+    fun create(
+        property: Property,
+        name: String,
+        `in`: ParameterInputType,
+        description: String? = property.description ?: name,
+        required: Boolean = true,
+        examples: Map<String, Example> = emptyMap()
+    ): ParameterBase
 }
 
 interface ResponseBase {
@@ -160,7 +132,11 @@ data class Property(
     val enum: List<String>? = null,
     val items: Property? = null,
     val description: String? = null,
-    val `$ref`: String? = null
-)
+    override val `$ref`: String? = null
+) : RefHolder
+
+interface RefHolder {
+    val `$ref`: String?
+}
 
 annotation class Group(val name: String)

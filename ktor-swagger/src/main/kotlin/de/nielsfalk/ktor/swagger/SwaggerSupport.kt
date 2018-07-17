@@ -4,7 +4,7 @@ import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
 import de.nielsfalk.ktor.swagger.version.shared.OperationBase
-import de.nielsfalk.ktor.swagger.version.shared.Parameter
+import de.nielsfalk.ktor.swagger.version.shared.ParameterBase
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
@@ -28,6 +28,8 @@ import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
 import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
+import de.nielsfalk.ktor.swagger.version.v3.Parameter as ParameterV3
+import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 
 class SwaggerSupport(
     val swagger: Swagger?,
@@ -86,11 +88,11 @@ class SwaggerSupport(
             when (it) {
                 is Swagger -> SwaggerBaseWithVariation(
                     it,
-                    SpecVariation("#/definitions/", ResponseV2, OperationV2)
+                    SpecVariation("#/definitions/", ResponseV2, OperationV2, ParameterV2)
                 )
                 is OpenApi -> OpenApiBaseWithVariation(
                     it,
-                    SpecVariation("#/components/schemas/", ResponseV3, OperationV3)
+                    SpecVariation("#/components/schemas/", ResponseV3, OperationV3, ParameterV3)
                 )
                 else -> throw IllegalStateException("Must be of type ${Swagger::class.simpleName} or ${OpenApi::class.simpleName}")
             }
@@ -108,9 +110,10 @@ class SwaggerSupport(
     private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
         bodySchema?.let {
             BodyFromSchema(
-                name = bodySchema.name ?: typeInfo.modelName()
+                name = bodySchema.name ?: typeInfo.modelName(),
+                examples = bodyExamples
             )
-        } ?: BodyFromReflection(typeInfo)
+        } ?: BodyFromReflection(typeInfo, bodyExamples)
 
     private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
         require(!(methodForbidsBody.contains(method) && bodySchema != null)) {
@@ -217,7 +220,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 status.value.toString() to response
             }.toMap()
 
-            val parameters = mutableListOf<Parameter>().apply {
+            val parameters = mutableListOf<ParameterBase>().apply {
                 variation {
                     if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
                         add(bodyType.bodyParameter())

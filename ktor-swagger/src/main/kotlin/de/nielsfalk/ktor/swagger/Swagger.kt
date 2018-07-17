@@ -5,7 +5,8 @@ package de.nielsfalk.ktor.swagger
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
 import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
-import de.nielsfalk.ktor.swagger.version.shared.Parameter
+import de.nielsfalk.ktor.swagger.version.shared.ParameterBase
+import de.nielsfalk.ktor.swagger.version.shared.ParameterCreator
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType.body
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType.query
@@ -50,7 +51,8 @@ fun Group.toList(): List<Tag> {
 internal class SpecVariation(
     internal val modelRoot: String,
     internal val reponseCreator: ResponseCreator,
-    internal val operationCreator: OperationCreator
+    internal val operationCreator: OperationCreator,
+    internal val parameterCreator: ParameterCreator
 ) {
     operator fun <R> invoke(use: SpecVariation.() -> R): R =
         this.use()
@@ -58,13 +60,13 @@ internal class SpecVariation(
     fun <T, R> KProperty1<T, R>.toParameter(
         path: String,
         inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query
-    ): Pair<Parameter, Collection<TypeInfo>> {
+    ): Pair<ParameterBase, Collection<TypeInfo>> {
         val schemaAnnotation = annotations.firstOrNull { it is Schema } as? Schema
         return if (schemaAnnotation != null) {
             val property = Property(
                 `$ref` = "$modelRoot${schemaAnnotation.schema}"
             )
-            Parameter.create(
+            parameterCreator.create(
                 property,
                 name,
                 inputType,
@@ -73,7 +75,7 @@ internal class SpecVariation(
             ) to emptyTypeInfoList
         } else {
             toModelProperty().let {
-                Parameter.create(
+                parameterCreator.create(
                     it.first,
                     name,
                     inputType,
@@ -86,18 +88,20 @@ internal class SpecVariation(
     internal fun BodyType.bodyParameter() =
         when (this) {
             is BodyFromReflection ->
-                Parameter.create(
+                parameterCreator.create(
                     typeInfo.referenceProperty(),
                     name = "noReflectionBody",
                     description = typeInfo.modelName(),
-                    `in` = body
+                    `in` = body,
+                    examples = examples
                 )
             is BodyFromSchema ->
-                Parameter.create(
+                parameterCreator.create(
                     referenceProperty(),
                     name = "noReflectionBody",
                     description = name,
-                    `in` = body
+                    `in` = body,
+                    examples = examples
                 )
         }
 

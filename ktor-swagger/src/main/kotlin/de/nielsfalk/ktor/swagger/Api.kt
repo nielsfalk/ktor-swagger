@@ -104,10 +104,12 @@ data class ResponseSchema(val name: ModelName, override val examples: Map<String
 /**
  * The type of the operation body being recived by the server.
  */
-sealed class BodyType
+sealed class BodyType {
+    abstract val examples: Map<String, Example>
+}
 
-data class BodyFromReflection(val typeInfo: TypeInfo) : BodyType()
-data class BodyFromSchema(val name: ModelName) : BodyType()
+data class BodyFromReflection(val typeInfo: TypeInfo, override val examples: Map<String, Example>) : BodyType()
+data class BodyFromSchema(val name: ModelName, override val examples: Map<String, Example>) : BodyType()
 
 inline fun <reified T> ok(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(
     typeInfo<T>(), mapOf(*examples)

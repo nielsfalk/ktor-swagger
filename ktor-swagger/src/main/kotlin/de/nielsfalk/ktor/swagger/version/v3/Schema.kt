@@ -8,9 +8,12 @@ import de.nielsfalk.ktor.swagger.version.shared.Information
 import de.nielsfalk.ktor.swagger.version.shared.ModelReference
 import de.nielsfalk.ktor.swagger.version.shared.OperationBase
 import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
-import de.nielsfalk.ktor.swagger.version.shared.Parameter
+import de.nielsfalk.ktor.swagger.version.shared.ParameterBase
+import de.nielsfalk.ktor.swagger.version.shared.ParameterCreator
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.Paths
+import de.nielsfalk.ktor.swagger.version.shared.Property
+import de.nielsfalk.ktor.swagger.version.shared.RefHolder
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
 import de.nielsfalk.ktor.swagger.version.shared.Tag
@@ -123,14 +126,14 @@ class Operation(
     companion object : OperationCreator {
         override fun create(
             responses: Map<HttpStatus, ResponseBase>,
-            parameters: List<Parameter>,
+            parameters: List<ParameterBase>,
             tags: List<Tag>?,
             summary: String,
             examples: Map<String, Example>
         ): OperationBase {
             val bodyParams =
                 parameters
-                    .filter { it.`in` == ParameterInputType.body }
+                    .filter { it.`in` == ParameterInputType.body }.map { it as Parameter }
 
             assert(bodyParams.size < 2) {
                 "Should not be more than 1 body parameter."
@@ -138,14 +141,14 @@ class Operation(
 
             val parametersToUse =
                 parameters
-                    .filter { it.`in` != ParameterInputType.body }
+                    .filter { it.`in` != ParameterInputType.body }.map { it as Parameter }
 
             val requestBody: RequestBody? =
                 bodyParams.firstOrNull()?.let {
                     val content = mapOf(
                         "application/json" to MediaTypeObject(
                             ModelReference(
-                                `$ref` = it.schema!!.`$ref`
+                                `$ref` = it.schema.`$ref`!!
                             ),
                             example = examples.values.firstOrNull()?.value,
                             examples = examples
@@ -162,6 +165,38 @@ class Operation(
                 tags,
                 summary,
                 requestBody = requestBody
+            )
+        }
+    }
+}
+
+class Parameter(
+    override val name: String,
+    override val `in`: ParameterInputType,
+    override val description: String?,
+    override val required: Boolean,
+    val deprecated: Boolean = false,
+    val allowEmptyValue: Boolean = true,
+    val schema: RefHolder,
+    val example: Any? = null,
+    val examples: Map<String, Example>? = null
+) : ParameterBase {
+    companion object : ParameterCreator {
+        override fun create(
+            property: Property,
+            name: String,
+            `in`: ParameterInputType,
+            description: String?,
+            required: Boolean,
+            examples: Map<String, Example>
+        ): ParameterBase {
+            return Parameter(
+                name = name,
+                `in` = `in`,
+                description = description,
+                required = required,
+                schema = property,
+                examples = examples
             )
         }
     }

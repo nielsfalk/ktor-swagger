@@ -16,6 +16,7 @@ import org.junit.Test
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
+import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
 const val rectanglesLocation = "/rectangles"
@@ -127,7 +128,7 @@ class SwaggerManualSchemaTest {
 
             operation.summary.should.equal("create")
             operation.responses.keys.should.contain("201")
-            (operation.parameters.find { it.`in` == ParameterInputType.body }?.schema as ModelReference)
+            ((operation.parameters.find { it.`in` == ParameterInputType.body } as ParameterV2).schema as ModelReference)
                 .`$ref`.should.equal("#/definitions/Rectangle")
             (operation.responses["201"] as ResponseV2).schema?.`$ref`.should.equal("#/definitions/Rectangles")
         }
@@ -161,7 +162,7 @@ class SwaggerManualSchemaTest {
             should.not.be.`null`
         }?.also { operation ->
             operation as OperationV2
-            operation.parameters.single { it.`in` == ParameterInputType.body }.schema?.`$ref`
+            (operation.parameters.single { it.`in` == ParameterInputType.body } as ParameterV2).schema?.`$ref`
             .should.equal("#/definitions/$customName")
         }
 
