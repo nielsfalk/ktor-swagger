@@ -207,10 +207,10 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 val response = when (type) {
                     is ResponseFromReflection -> {
                         addDefinition(type.type)
-                        variation.reponseCreator.create(status, type.type)
+                        variation.reponseCreator.create(status, type.type, type.examples)
                     }
                     is ResponseSchema -> {
-                        variation.reponseCreator.create(type.name)
+                        variation.reponseCreator.create(type.name, type.examples)
                     }
                 }
 
@@ -253,7 +253,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 parameters,
                 location,
                 group,
-                method
+                method,
+                bodyExamples
             )
         }
 

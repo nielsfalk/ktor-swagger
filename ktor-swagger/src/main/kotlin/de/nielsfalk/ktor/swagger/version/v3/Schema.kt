@@ -27,7 +27,7 @@ typealias SecuritySchemes = MutableMap<String, Any>
 typealias Links = MutableMap<String, Any>
 typealias Callbacks = MutableMap<String, Any>
 
-typealias Content = Map<String, SchemaModelReference>
+typealias Content = Map<String, MediaTypeObject>
 
 class OpenApi : CommonBase {
     val openapi: String = "3.0.0"
@@ -64,31 +64,52 @@ class Response(
 ) : ResponseBase {
 
     companion object : ResponseCreator {
-        override fun create(httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): Response {
+        override fun create(
+            httpStatusCode: HttpStatusCode,
+            typeInfo: TypeInfo,
+            examples: Map<String, Example>
+        ): Response {
             val jsonContent = if (typeInfo.type == Unit::class) null else ModelReference.create(
                 "#/components/schemas/" + typeInfo.modelName()
             )
-            val content = jsonContent?.let { mapOf("application/json" to SchemaModelReference(it)) }
+            val content = jsonContent?.let {
+                mapOf(
+                    "application/json" to MediaTypeObject(
+                        it,
+                        example = examples.values.firstOrNull()?.value,
+                        examples = examples
+                    )
+                )
+            }
             return Response(
                 description = if (typeInfo.type == Unit::class) httpStatusCode.description else typeInfo.responseDescription(),
                 content = content
             )
         }
 
-        override fun create(modelName: String): Response {
+        override fun create(
+            modelName: String,
+            examples: Map<String, Example>
+        ): Response {
             return Response(
                 description = modelName,
                 content = mapOf(
                     "application/json" to
-                        SchemaModelReference(ModelReference.create("#/components/schemas/" + modelName))
+                        MediaTypeObject(
+                            ModelReference.create("#/components/schemas/" + modelName),
+                            example = examples.values.firstOrNull()?.value,
+                            examples = examples
+                        )
                 )
             )
         }
     }
 }
 
-class SchemaModelReference(
-    val schema: ModelReference
+class MediaTypeObject(
+    val schema: ModelReference,
+    val example: Any? = null,
+    val examples: Map<String, Example> = mapOf()
 )
 
 class Operation(
@@ -104,14 +125,15 @@ class Operation(
             responses: Map<HttpStatus, ResponseBase>,
             parameters: List<Parameter>,
             tags: List<Tag>?,
-            summary: String
+            summary: String,
+            examples: Map<String, Example>
         ): OperationBase {
             val bodyParams =
                 parameters
                     .filter { it.`in` == ParameterInputType.body }
 
             assert(bodyParams.size < 2) {
-                "Should not be more than 1 noReflectionBody parameter."
+                "Should not be more than 1 body parameter."
             }
 
             val parametersToUse =
@@ -120,17 +142,19 @@ class Operation(
 
             val requestBody: RequestBody? =
                 bodyParams.firstOrNull()?.let {
-                val content = mapOf(
-                    "application/json" to SchemaModelReference(
-                        ModelReference(
-                            `$ref` = it.schema!!.`$ref`
+                    val content = mapOf(
+                        "application/json" to MediaTypeObject(
+                            ModelReference(
+                                `$ref` = it.schema!!.`$ref`
+                            ),
+                            example = examples.values.firstOrNull()?.value,
+                            examples = examples
                         )
                     )
-                )
-                RequestBody(
-                    content = content
-                )
-            }
+                    RequestBody(
+                        content = content
+                    )
+                }
 
             return Operation(
                 responses,
@@ -145,6 +169,14 @@ class Operation(
 
 class RequestBody(
     val content: Content
+)
+
+data class Example(
+    val summary: String?,
+    val description: String?,
+    val value: Any?,
+    val externalValue: String?,
+    val `$ref`: String?
 )
 
 @Target(AnnotationTarget.PROPERTY)

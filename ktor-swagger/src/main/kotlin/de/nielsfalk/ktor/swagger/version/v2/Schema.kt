@@ -14,6 +14,7 @@ import de.nielsfalk.ktor.swagger.version.shared.Paths
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
 import de.nielsfalk.ktor.swagger.version.shared.Tag
+import de.nielsfalk.ktor.swagger.version.v3.Example
 import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpStatusCode
 
@@ -32,7 +33,11 @@ class Response(
 ) : ResponseBase {
 
     companion object : ResponseCreator {
-        override fun create(httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): Response {
+        override fun create(
+            httpStatusCode: HttpStatusCode,
+            typeInfo: TypeInfo,
+            examples: Map<String, Example>
+        ): Response {
             return Response(
                 description = if (typeInfo.type == Unit::class) httpStatusCode.description else typeInfo.responseDescription(),
                 schema = if (typeInfo.type == Unit::class) null else ModelReference.create(
@@ -41,7 +46,10 @@ class Response(
             )
         }
 
-        override fun create(modelName: String): Response {
+        override fun create(
+            modelName: String,
+            examples: Map<String, Example>
+        ): Response {
             return Response(
                 description = modelName,
                 schema = ModelReference.create("#/definitions/" + modelName)
@@ -62,7 +70,8 @@ class Operation(
             responses: Map<HttpStatus, ResponseBase>,
             parameters: List<Parameter>,
             tags: List<Tag>?,
-            summary: String
+            summary: String,
+            examples: Map<String, Example>
         ): OperationBase {
             return Operation(
                 responses,

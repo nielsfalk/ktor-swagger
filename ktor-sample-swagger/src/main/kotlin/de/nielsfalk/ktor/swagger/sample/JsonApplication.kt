@@ -4,21 +4,23 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
-import de.nielsfalk.ktor.swagger.version.shared.Contact
-import de.nielsfalk.ktor.swagger.version.shared.Group
-import de.nielsfalk.ktor.swagger.version.shared.Information
-import de.nielsfalk.ktor.swagger.version.v3.Schema
 import de.nielsfalk.ktor.swagger.SwaggerSupport
 import de.nielsfalk.ktor.swagger.created
 import de.nielsfalk.ktor.swagger.delete
+import de.nielsfalk.ktor.swagger.example
+import de.nielsfalk.ktor.swagger.examples
 import de.nielsfalk.ktor.swagger.get
 import de.nielsfalk.ktor.swagger.notFound
 import de.nielsfalk.ktor.swagger.ok
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
 import de.nielsfalk.ktor.swagger.responds
+import de.nielsfalk.ktor.swagger.version.shared.Contact
+import de.nielsfalk.ktor.swagger.version.shared.Group
+import de.nielsfalk.ktor.swagger.version.shared.Information
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
+import de.nielsfalk.ktor.swagger.version.v3.Schema
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
@@ -41,9 +43,30 @@ import io.ktor.server.netty.Netty
 import io.ktor.util.StringValues
 import io.ktor.util.toMap
 
-data class PetModel(val id: Int?, val name: String)
+data class PetModel(val id: Int?, val name: String) {
+    companion object {
+        val exampleSpike = mapOf(
+            "id" to 1,
+            "name" to "Spike"
+        )
 
-data class PetsModel(val pets: MutableList<PetModel>)
+        val exampleRover = mapOf(
+            "id" to 2,
+            "name" to "Rover"
+        )
+    }
+}
+
+data class PetsModel(val pets: MutableList<PetModel>) {
+    companion object {
+        val exampleModel = mapOf(
+            "pets" to listOf(
+                PetModel.exampleSpike,
+                PetModel.exampleRover
+            )
+        )
+    }
+}
 
 data class Model<T>(val elements: MutableList<T>)
 
@@ -66,6 +89,7 @@ val data = PetsModel(
         PetModel(2, "moritz")
     )
 )
+
 fun newId() = ((data.pets.map { it.id ?: 0 }.max()) ?: 0) + 1
 
 @Group("pet operations")
@@ -81,6 +105,7 @@ class pets
 class genericPets
 
 const val petUuid = "petUuid"
+
 @Group("generic operations")
 @Location("/pet/custom/{id}")
 class petCustomSchemaParam(
@@ -151,49 +176,71 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
             }
         }
         routing {
-            get<pets>("all".responds(ok<PetsModel>())) {
+            get<pets>("all".responds(ok<PetsModel>(example("model", PetsModel.exampleModel)))) {
                 call.respond(data)
             }
-            post<pets, PetModel>("create".responds(created<PetModel>())) { _, entity ->
+            post<pets, PetModel>(
+                "create"
+                    .examples(
+                        example("rover", PetModel.exampleRover),
+                        example("spike", PetModel.exampleSpike)
+                    )
+                    .responds(
+                        created<PetModel>(
+                            example("rover", PetModel.exampleRover),
+                            example("spike", PetModel.exampleSpike)
+                        )
+                    )
+            ) { _, entity ->
                 call.respond(Created, entity.copy(id = newId()).apply {
                     data.pets.add(this)
                 })
             }
-            get<pet>("find".responds(
-                ok<PetModel>(),
-                notFound()
-            )) { params ->
+            get<pet>(
+                "find".responds(
+                    ok<PetModel>(),
+                    notFound()
+                )
+            ) { params ->
                 data.pets.find { it.id == params.id }
                     ?.let {
                         call.respond(it)
                     }
             }
-            put<pet, PetModel>("update".responds(
-                ok<PetModel>(),
-                notFound()
-            )) { params, entity ->
+            put<pet, PetModel>(
+                "update".responds(
+                    ok<PetModel>(),
+                    notFound()
+                )
+            ) { params, entity ->
                 if (data.pets.removeIf { it.id == params.id && it.id == entity.id }) {
                     data.pets.add(entity)
                     call.respond(entity)
                 }
             }
-            delete<pet>("delete".responds(
-                ok<Unit>(),
-                notFound()
-            )) { params ->
+            delete<pet>(
+                "delete".responds(
+                    ok<Unit>(),
+                    notFound()
+                )
+            ) { params ->
                 if (data.pets.removeIf { it.id == params.id }) {
                     call.respond(Unit)
                 }
             }
-            get<shapes>("all".responds(
-                ok("Rectangle")
-            )) {
-                call.respondText("""
+            get<shapes>(
+                "all".responds(
+                    ok("Rectangle")
+                )
+            ) {
+                call.respondText(
+                    """
                     {
                         "a" : 10,
                         "b" : 25
                     }
-                """.trimIndent(), ContentType.Application.Json)
+                """.trimIndent(), ContentType.Application.Json
+                )
             }
             get<genericPets>("all".responds(ok<Model<PetModel>>())) {
                 call.respond(data)
@@ -250,7 +297,12 @@ class Launcher : CliktCommand(
     companion object {
         private const val defaultPort = 8080
     }
-    private val port: Int by option("-p", "--port", help = "The port that this server should be started on. Defaults to $defaultPort.")
+
+    private val port: Int by option(
+        "-p",
+        "--port",
+        help = "The port that this server should be started on. Defaults to $defaultPort."
+    )
         .int()
         .default(defaultPort)
 

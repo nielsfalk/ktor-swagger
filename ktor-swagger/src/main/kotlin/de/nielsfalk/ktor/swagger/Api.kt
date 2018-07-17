@@ -1,6 +1,7 @@
 package de.nielsfalk.ktor.swagger
 
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
+import de.nielsfalk.ktor.swagger.version.v3.Example
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.client.call.TypeInfo
@@ -23,6 +24,7 @@ import kotlin.reflect.KClass
 
 data class Metadata(
     internal val bodySchema: BodySchema? = null,
+    internal val bodyExamples: Map<String, Example> = emptyMap(),
     internal val responses: Map<HttpStatusCode, ResponseType> = emptyMap(),
     internal val summary: String? = null,
     internal val headers: KClass<*>? = null,
@@ -35,6 +37,9 @@ data class Metadata(
 
 fun Metadata.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata =
     copy(responses = (responses + mapOf(*pairs)))
+
+fun Metadata.examples(vararg pairs: Pair<String, Example>): Metadata =
+    copy(bodyExamples = (bodyExamples + mapOf(*pairs)))
 
 /**
  * Defines the schema reference name for the body of the message of the incoming JSON object.
@@ -67,6 +72,19 @@ fun String.noReflectionBody() =
 fun noReflectionBody(): Metadata =
     noReflectionBody(null)
 
+fun String.examples(vararg pairs: Pair<String, Example>): Metadata =
+    Metadata(summary = this).examples(*pairs)
+
+fun example(
+    id: String,
+    value: Any? = null,
+    summary: String? = null,
+    description: String? = null,
+    externalValue: String? = null,
+    `$ref`: String? = null
+): Pair<String, Example> =
+    id to Example(summary, description, value, externalValue, `$ref`)
+
 /**
  * @receiver The summary to use for the operation.
  */
@@ -76,10 +94,12 @@ fun String.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata 
 fun responds(vararg pairs: Pair<HttpStatusCode, ResponseType>) =
     Metadata(responses = mapOf(*pairs))
 
-sealed class ResponseType
+sealed class ResponseType() {
+    abstract val examples: Map<String, Example>
+}
 
-data class ResponseFromReflection(val type: TypeInfo) : ResponseType()
-data class ResponseSchema(val name: ModelName) : ResponseType()
+data class ResponseFromReflection(val type: TypeInfo, override val examples: Map<String, Example>) : ResponseType()
+data class ResponseSchema(val name: ModelName, override val examples: Map<String, Example>) : ResponseType()
 
 /**
  * The type of the operation body being recived by the server.
@@ -89,21 +109,23 @@ sealed class BodyType
 data class BodyFromReflection(val typeInfo: TypeInfo) : BodyType()
 data class BodyFromSchema(val name: ModelName) : BodyType()
 
-inline fun <reified T> ok(): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(
-    typeInfo<T>()
+inline fun <reified T> ok(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(
+    typeInfo<T>(), mapOf(*examples)
 )
 
-fun ok(name: String) = OK to ResponseSchema(name)
-inline fun <reified T> created(): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(
-    typeInfo<T>()
+fun ok(name: String, vararg examples: Pair<String, Example> = arrayOf()) = OK to ResponseSchema(
+    name, mapOf(*examples)
+)
+inline fun <reified T> created(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(
+    typeInfo<T>(), mapOf(*examples)
 )
 
-fun created(name: String): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(
-    name
+fun created(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(
+    name, mapOf(*examples)
 )
 
 inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
-    typeInfo<Unit>()
+    typeInfo<Unit>(), emptyMap()
 )
 
 @ContextDsl

@@ -2,6 +2,7 @@ package de.nielsfalk.ktor.swagger.version.shared
 
 import de.nielsfalk.ktor.swagger.Metadata
 import de.nielsfalk.ktor.swagger.toList
+import de.nielsfalk.ktor.swagger.version.v3.Example
 import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -51,7 +52,8 @@ interface OperationCreator {
         parameters: List<Parameter>,
         location: Location,
         group: Group?,
-        method: HttpMethod
+        method: HttpMethod,
+        examples: Map<String, Example>
     ): OperationBase {
         val tags = group?.toList()
         val summary = metadata.summary ?: "${method.value} ${location.path}"
@@ -59,7 +61,8 @@ interface OperationCreator {
             responses,
             parameters,
             tags,
-            summary
+            summary,
+            examples
         )
     }
 
@@ -67,7 +70,8 @@ interface OperationCreator {
         responses: Map<HttpStatus, ResponseBase>,
         parameters: List<Parameter>,
         tags: List<Tag>?,
-        summary: String
+        summary: String,
+        examples: Map<String, Example>
     ): OperationBase
 }
 
@@ -128,9 +132,16 @@ interface ResponseBase {
 }
 
 interface ResponseCreator {
-    fun create(httpStatusCode: HttpStatusCode, typeInfo: TypeInfo): ResponseBase
+    fun create(
+        httpStatusCode: HttpStatusCode,
+        typeInfo: TypeInfo,
+        examples: Map<String, Example>
+    ): ResponseBase
 
-    fun create(modelName: String): ResponseBase
+    fun create(
+        modelName: String,
+        examples: Map<String, Example>
+    ): ResponseBase
 }
 
 enum class ParameterInputType {
