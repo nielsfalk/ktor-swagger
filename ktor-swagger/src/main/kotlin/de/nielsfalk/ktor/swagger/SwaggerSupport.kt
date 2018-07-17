@@ -42,9 +42,15 @@ class SwaggerSupport(
         override fun install(pipeline: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
             val (path, forwardRoot, provideUi, swagger, openApi) = SwaggerUiConfiguration().apply(configure)
             val feature = SwaggerSupport(swagger, openApi)
+
+            val defaultJsonFile = when {
+                openApi != null -> openApiJsonFileName
+                swagger != null -> swaggerJsonFileName
+                else -> throw IllegalArgumentException("Swagger or OpenApi must be specified")
+            }
             pipeline.routing {
                 get("/$path") {
-                    redirect(path)
+                    redirect(path, defaultJsonFile)
                 }
                 val ui = if (provideUi) SwaggerUi() else null
                 get("/$path/{fileName}") {
@@ -58,11 +64,7 @@ class SwaggerSupport(
                     }
                 }
                 if (forwardRoot) {
-                    val defaultJsonFile = when {
-                        openApi != null -> openApiJsonFileName
-                        swagger != null -> swaggerJsonFileName
-                        else -> throw IllegalArgumentException("Swagger or OpenApi must be specified for `forwardRoot`.")
-                    }
+
                     get("/") {
                         redirect(path, defaultJsonFile)
                     }
