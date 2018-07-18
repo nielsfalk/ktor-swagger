@@ -65,7 +65,7 @@ fun noReflectionBody(name: ModelName?): Metadata =
  * The name will be infered from the reified `ENTITY` type.
  * @receiver The summary to use for the operation.
  */
-@JvmName("noReflectionBodyReciverIsSummary")
+@JvmName("noReflectionBodyReceiverIsSummary")
 fun String.noReflectionBody() =
     noReflectionBody(null)
 
