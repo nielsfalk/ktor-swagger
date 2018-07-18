@@ -182,8 +182,8 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
             post<pets, PetModel>(
                 "create"
                     .examples(
-                        example("rover", PetModel.exampleRover),
-                        example("spike", PetModel.exampleSpike)
+                        example("rover", PetModel.exampleRover, summary = "Rover is one possible pet."),
+                        example("spike", PetModel.exampleSpike, summary = "Spike is a different posssible pet.")
                     )
                     .responds(
                         created<PetModel>(
