@@ -1,6 +1,10 @@
 package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
+import de.nielsfalk.ktor.swagger.version.shared.Property
+import de.nielsfalk.ktor.swagger.version.v2.Operation
+import de.nielsfalk.ktor.swagger.version.v2.Parameter
+import de.nielsfalk.ktor.swagger.version.v2.Response
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
 import org.junit.Test
@@ -10,6 +14,16 @@ import kotlin.reflect.full.memberProperties
 import kotlin.test.assertEquals
 
 class ModelExtractionTest {
+    private val variation = SpecVariation(
+        "#/definitions/",
+        Response,
+        Operation,
+        Parameter
+    )
+
+    private fun createModelData(typeInfo: TypeInfo) =
+        variation.createModelData(typeInfo)
+
     private inline fun <reified T> createAndExtractModelData() =
         createModelData(typeInfo<T>()).first
 
@@ -175,7 +189,8 @@ class ModelExtractionTest {
     fun `name of triply nested generic type`() {
         val tripleNestedTypeInfo =
             typeInfo<ModelNestedGenericList<ModelNestedGenericList<ModelNestedGenericList<SubModelElement>>>>()
-        tripleNestedTypeInfo.modelName().should.equal("ModelNestedGenericListOfModelNestedGenericListOfModelNestedGenericListOfSubModelElement")
+        tripleNestedTypeInfo.modelName()
+            .should.equal("ModelNestedGenericListOfModelNestedGenericListOfModelNestedGenericListOfSubModelElement")
     }
 
     @Test
@@ -291,7 +306,7 @@ class ModelExtractionTest {
 
     @Test
     fun `optional parameters`() {
-        val map = Parameters::class.memberProperties.map { it.toParameter("").first }
+        val map = variation { Parameters::class.memberProperties.map { it.toParameter("").first } }
 
         map.find { it.name == "optional" }!!.required.should.equal(false)
         map.find { it.name == "mandatory" }!!.required.should.equal(true)

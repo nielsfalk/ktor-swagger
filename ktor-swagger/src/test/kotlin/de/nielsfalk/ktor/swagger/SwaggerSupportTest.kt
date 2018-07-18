@@ -1,6 +1,7 @@
 package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
+import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.gson.GsonConverter
@@ -17,7 +18,10 @@ class SwaggerSupportTest {
     @Test
     fun `installed apidocs`(): Unit = withTestApplication {
         // when
-        application.install(SwaggerSupport) { forwardRoot = true }
+        application.install(SwaggerSupport) {
+            forwardRoot = true
+            swagger = Swagger()
+        }
 
         // then
         handleRequest(
@@ -37,7 +41,10 @@ class SwaggerSupportTest {
     @Test
     fun `provide webjar`(): Unit = withTestApplication {
         // when
-        application.install(SwaggerSupport) { forwardRoot = true }
+        application.install(SwaggerSupport) {
+            forwardRoot = true
+            swagger = Swagger()
+        }
 
         // then
         handleRequest(
@@ -52,7 +59,10 @@ class SwaggerSupportTest {
         application.install(ContentNegotiation) {
             register(ContentType.Application.Json, GsonConverter())
         }
-        application.install(SwaggerSupport) { forwardRoot = true }
+        application.install(SwaggerSupport) {
+            forwardRoot = true
+            swagger = Swagger()
+        }
 
         // then
         handleRequest {
@@ -75,11 +85,14 @@ class SwaggerSupportTest {
         }
         application.install(SwaggerSupport) {
             forwardRoot = true
+            swagger = Swagger().apply {
+                definitions["Model"] = mapOf("type" to "object")
+            }
         }
         application.install(Locations)
 
         application.routing {
-            put<modelRoute, Model>(body(mapOf("type" to "object"))) { _, _ -> }
+            put<modelRoute, Model>(noReflectionBody()) { _, _ -> }
         }
 
         // then
