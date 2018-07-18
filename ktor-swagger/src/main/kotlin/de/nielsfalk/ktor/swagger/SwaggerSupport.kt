@@ -231,22 +231,16 @@ private abstract class BaseWithVariation<B : CommonBase>(
                             it.first
                         }
                     })
-                    parameter?.let {
-                        addAll(it.memberProperties.map {
-                            it.toParameter(location.path, ParameterInputType.query).let {
+                    fun KClass<*>.processToParameters(parameterType: ParameterInputType) {
+                        addAll(memberProperties.map {
+                            it.toParameter(location.path, parameterType).let {
                                 addDefinitions(it.second)
                                 it.first
                             }
                         })
                     }
-                    headers?.let {
-                        addAll(it.memberProperties.map {
-                            it.toParameter(location.path, ParameterInputType.header).let {
-                                addDefinitions(it.second)
-                                it.first
-                            }
-                        })
-                    }
+                    parameter?.processToParameters(ParameterInputType.query)
+                    headers?.processToParameters(ParameterInputType.header)
                 }
             }
 
