@@ -120,6 +120,7 @@ class Operation(
     override val parameters: List<Parameter>,
     override val tags: List<Tag>?,
     override val summary: String,
+    override val description: String?,
     val requestBody: RequestBody?
 ) : OperationBase {
 
@@ -129,6 +130,7 @@ class Operation(
             parameters: List<ParameterBase>,
             tags: List<Tag>?,
             summary: String,
+            description: String?,
             examples: Map<String, Example>
         ): OperationBase {
             val bodyParams =
@@ -164,6 +166,7 @@ class Operation(
                 parametersToUse,
                 tags,
                 summary,
+                description,
                 requestBody = requestBody
             )
         }

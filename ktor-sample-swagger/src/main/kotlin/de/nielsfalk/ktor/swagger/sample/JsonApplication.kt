@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import de.nielsfalk.ktor.swagger.SwaggerSupport
 import de.nielsfalk.ktor.swagger.created
 import de.nielsfalk.ktor.swagger.delete
+import de.nielsfalk.ktor.swagger.description
 import de.nielsfalk.ktor.swagger.example
 import de.nielsfalk.ktor.swagger.examples
 import de.nielsfalk.ktor.swagger.get
@@ -181,6 +182,7 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
             }
             post<pets, PetModel>(
                 "create"
+                    .description("Save a pet in our wonderful database!")
                     .examples(
                         example("rover", PetModel.exampleRover, summary = "Rover is one possible pet."),
                         example("spike", PetModel.exampleSpike, summary = "Spike is a different posssible pet.")
