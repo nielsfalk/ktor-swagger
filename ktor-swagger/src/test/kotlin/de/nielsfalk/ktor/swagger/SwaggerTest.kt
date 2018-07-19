@@ -77,6 +77,7 @@ class SwaggerTest {
             application.routing {
                 put<toy, ToyModel>(
                     "update"
+                        .description("Update a toy!")
                         .examples(
                             example("kite", ToyModel.kiteExample),
                             example("train", ToyModel.trainExample)
@@ -91,7 +92,8 @@ class SwaggerTest {
                         .responds(created<ToyModel>())
                 ) { _, _ -> }
                 get<toys>(
-                    "all".responds(
+                    "all"
+                        .responds(
                         ok<ToysModel>(example("model", ToysModel.example)),
                         notFound()
                     )
@@ -143,6 +145,7 @@ class SwaggerTest {
     @Test
     fun `openapi put toy operation with examples`() {
         val operation = (openapi.paths.get(toysLocation)?.get("put") as OperationV3)
+        operation.description.should.not.be.`null`
         operation.requestBody?.content?.get("application/json")
             .apply {
                 should.not.be.`null`

@@ -27,6 +27,7 @@ data class Metadata(
     internal val bodyExamples: Map<String, Example> = emptyMap(),
     internal val responses: Map<HttpStatusCode, ResponseType> = emptyMap(),
     internal val summary: String? = null,
+    internal val description: String? = null,
     internal val headers: KClass<*>? = null,
     internal val parameter: KClass<*>? = null
 ) {
@@ -41,6 +42,12 @@ fun Metadata.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadat
 fun Metadata.examples(vararg pairs: Pair<String, Example>): Metadata =
     copy(bodyExamples = (bodyExamples + mapOf(*pairs)))
 
+fun Metadata.description(description: String): Metadata =
+    copy(description = description)
+
+fun Metadata.noReflectionBody(name: ModelName): Metadata =
+    copy(bodySchema = BodySchema(name))
+
 /**
  * Defines the schema reference name for the body of the message of the incoming JSON object.
  */
@@ -48,6 +55,9 @@ data class BodySchema
 internal constructor(
     internal val name: ModelName?
 )
+
+fun String.description(description: String): Metadata =
+    Metadata(description = description, summary = this)
 
 /**
  * Define a custom schema for the body of the HTTP request.

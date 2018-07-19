@@ -65,7 +65,8 @@ class Operation(
     override val responses: Map<HttpStatus, ResponseBase>,
     override val parameters: List<ParameterBase>,
     override val tags: List<Tag>?,
-    override val summary: String
+    override val summary: String,
+    override val description: String?
 ) : OperationBase {
 
     companion object : OperationCreator {
@@ -74,13 +75,15 @@ class Operation(
             parameters: List<ParameterBase>,
             tags: List<Tag>?,
             summary: String,
+            description: String?,
             examples: Map<String, Example>
         ): OperationBase {
             return Operation(
                 responses,
                 parameters,
                 tags,
-                summary
+                summary,
+                description
             )
         }
     }
