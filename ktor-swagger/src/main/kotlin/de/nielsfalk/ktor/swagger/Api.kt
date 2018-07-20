@@ -8,6 +8,7 @@ import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.HttpStatusCode.Companion.BadRequest
 import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
@@ -128,6 +129,7 @@ inline fun <reified T> ok(vararg examples: Pair<String, Example> = arrayOf()): P
 fun ok(name: String, vararg examples: Pair<String, Example> = arrayOf()) = OK to ResponseSchema(
     name, mapOf(*examples)
 )
+
 inline fun <reified T> created(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(
     typeInfo<T>(), mapOf(*examples)
 )
@@ -136,8 +138,20 @@ fun created(name: String, vararg examples: Pair<String, Example> = arrayOf()): P
     name, mapOf(*examples)
 )
 
-inline fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
+fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
     typeInfo<Unit>(), emptyMap()
+)
+
+fun notFound(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseSchema(
+    name, mapOf(*examples)
+)
+
+fun badRequest(): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseFromReflection(
+    typeInfo<Unit>(), emptyMap()
+)
+
+fun badRequest(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseSchema(
+    name, mapOf(*examples)
 )
 
 @ContextDsl
