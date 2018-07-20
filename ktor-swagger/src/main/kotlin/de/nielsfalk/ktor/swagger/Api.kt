@@ -142,12 +142,20 @@ fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromRef
     typeInfo<Unit>(), emptyMap()
 )
 
+inline fun <reified T> notFound(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
+    typeInfo<T>(), mapOf(*examples)
+)
+
 fun notFound(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseSchema(
     name, mapOf(*examples)
 )
 
 fun badRequest(): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseFromReflection(
     typeInfo<Unit>(), emptyMap()
+)
+
+inline fun <reified T> badRequest(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseFromReflection(
+    typeInfo<T>(), mapOf(*examples)
 )
 
 fun badRequest(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseSchema(
