@@ -25,11 +25,11 @@ import io.ktor.util.AttributeKey
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
+import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
-import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 import de.nielsfalk.ktor.swagger.version.v3.Parameter as ParameterV3
-import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
+import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
 class SwaggerSupport(
     val swagger: Swagger?,
@@ -206,19 +206,17 @@ private abstract class BaseWithVariation<B : CommonBase>(
         }
 
         fun createOperation(): OperationBase {
-            val responses = responses.map { (status, type) ->
-                val response = when (type) {
-                    is ResponseFromReflection -> {
-                        addDefinition(type.type)
-                        variation.reponseCreator.create(status, type.type, type.examples)
-                    }
-                    is ResponseSchema -> {
-                        variation.reponseCreator.create(type.name, type.examples)
+            val responses = responses.map { codeResponse ->
+                codeResponse.responseTypes.forEach {
+                    if (it is JsonResponseFromReflection) {
+                        addDefinition(it.type)
                     }
                 }
 
-                status.value.toString() to response
-            }.toMap()
+                val response = variation.reponseCreator.create(codeResponse)
+
+                codeResponse.statusCode.value.toString() to response
+            }.toMap().filterNullValues()
 
             val parameters = mutableListOf<ParameterBase>().apply {
                 variation {
@@ -261,6 +259,17 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 method.value.toLowerCase(),
                 createOperation()
             )
+    }
+
+    private fun <K : Any, V> Map<K, V?>.filterNullValues(): Map<K, V> {
+        val destination = mutableListOf<Pair<K, V>>()
+        forEach {
+            val valueSaved = it.value
+            if (valueSaved != null) {
+                destination.add(it.key to valueSaved)
+            }
+        }
+        return destination.toMap()
     }
 }
 

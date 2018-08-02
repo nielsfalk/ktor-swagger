@@ -1,11 +1,15 @@
 package de.nielsfalk.ktor.swagger.version.v3
 
+import de.nielsfalk.ktor.swagger.CustomContentTypeResponse
+import de.nielsfalk.ktor.swagger.HttpCodeResponse
+import de.nielsfalk.ktor.swagger.JsonResponseFromReflection
+import de.nielsfalk.ktor.swagger.JsonResponseSchema
 import de.nielsfalk.ktor.swagger.modelName
 import de.nielsfalk.ktor.swagger.responseDescription
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.HttpStatus
 import de.nielsfalk.ktor.swagger.version.shared.Information
-import de.nielsfalk.ktor.swagger.version.shared.ModelReference
+import de.nielsfalk.ktor.swagger.version.shared.ModelOrModelReference
 import de.nielsfalk.ktor.swagger.version.shared.OperationBase
 import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
 import de.nielsfalk.ktor.swagger.version.shared.ParameterBase
@@ -18,6 +22,7 @@ import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
 import de.nielsfalk.ktor.swagger.version.shared.Tag
 import io.ktor.client.call.TypeInfo
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 
 typealias Schemas = MutableMap<String, Any>
@@ -67,12 +72,82 @@ class Response(
 ) : ResponseBase {
 
     companion object : ResponseCreator {
-        override fun create(
+        override fun create(response: HttpCodeResponse): ResponseBase? {
+            val singleResponseOrNull = response.responseTypes.singleOrNull()
+            val description = response.description ?: singleResponseOrNull
+                ?.let { it as? JsonResponseFromReflection }
+                ?.let { it.type.responseDescription() } ?: singleResponseOrNull
+                ?.let { it as? JsonResponseSchema }
+                ?.name ?: response.statusCode.description
+
+            val content = response
+                .responseTypes
+                .map {
+                    when (it) {
+                        is JsonResponseSchema -> createContent(it)
+                        is JsonResponseFromReflection -> createContent(it)
+                        is CustomContentTypeResponse -> createContent(it)
+                    }
+                }
+                .filterNotNull()
+                .toMap()
+
+            return Response(
+                description = description,
+                content = content
+            )
+        }
+
+        private fun createContent(jsonResponseSchema: JsonResponseSchema) =
+            jsonResponseSchema.run {
+                "application/json" to
+                    MediaTypeObject(
+                        ModelOrModelReference.create("#/components/schemas/" + name),
+                        example = examples.values.firstOrNull()?.value,
+                        examples = examples
+                    )
+            }
+
+        private fun createContent(jsonResponseFromReflection: JsonResponseFromReflection) =
+            jsonResponseFromReflection.run {
+                val jsonContent = if (type.type == Unit::class) null else ModelOrModelReference.create(
+                    "#/components/schemas/" + type.modelName()
+                )
+                jsonContent?.let {
+                    "application/json" to MediaTypeObject(
+                        it,
+                        example = examples.values.firstOrNull()?.value,
+                        examples = examples
+                    )
+                }
+            }
+
+        private fun createContent(customContentTypeResponse: CustomContentTypeResponse) =
+            customContentTypeResponse.run {
+                val contentTypeString = contentType.run { "$contentType/$contentSubtype" }
+                val modelOrModelReference = when {
+                    contentType.match(ContentType.Image.Any) -> ModelOrModelReference.create(
+                        type = "string",
+                        format = "binary"
+                    )
+                    contentType.match(ContentType.Text.Any) -> ModelOrModelReference.create(
+                        type = "string"
+                    )
+                    else -> throw UnsupportedOperationException(
+                        "Unsupported automatic module assignment for ContentType $contentTypeString"
+                    )
+                }
+                contentTypeString to MediaTypeObject(
+                    schema = modelOrModelReference
+                )
+            }
+
+        private fun create(
             httpStatusCode: HttpStatusCode,
             typeInfo: TypeInfo,
             examples: Map<String, Example>
         ): Response {
-            val jsonContent = if (typeInfo.type == Unit::class) null else ModelReference.create(
+            val jsonContent = if (typeInfo.type == Unit::class) null else ModelOrModelReference.create(
                 "#/components/schemas/" + typeInfo.modelName()
             )
             val content = jsonContent?.let {
@@ -90,7 +165,7 @@ class Response(
             )
         }
 
-        override fun create(
+        private fun create(
             modelName: String,
             examples: Map<String, Example>
         ): Response {
@@ -99,7 +174,7 @@ class Response(
                 content = mapOf(
                     "application/json" to
                         MediaTypeObject(
-                            ModelReference.create("#/components/schemas/" + modelName),
+                            ModelOrModelReference.create("#/components/schemas/" + modelName),
                             example = examples.values.firstOrNull()?.value,
                             examples = examples
                         )
@@ -110,7 +185,7 @@ class Response(
 }
 
 class MediaTypeObject(
-    val schema: ModelReference,
+    val schema: ModelOrModelReference,
     val example: Any? = null,
     val examples: Map<String, Example> = mapOf()
 )
@@ -149,7 +224,7 @@ class Operation(
                 bodyParams.firstOrNull()?.let {
                     val content = mapOf(
                         "application/json" to MediaTypeObject(
-                            ModelReference(
+                            ModelOrModelReference(
                                 `$ref` = it.schema.`$ref`!!
                             ),
                             example = examples.values.firstOrNull()?.value,

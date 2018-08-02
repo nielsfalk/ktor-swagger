@@ -1,7 +1,7 @@
 package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
-import de.nielsfalk.ktor.swagger.version.shared.ModelReference
+import de.nielsfalk.ktor.swagger.version.shared.ModelOrModelReference
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
@@ -128,7 +128,7 @@ class SwaggerManualSchemaTest {
 
             operation.summary.should.equal("create")
             operation.responses.keys.should.contain("201")
-            ((operation.parameters.find { it.`in` == ParameterInputType.body } as ParameterV2).schema as ModelReference)
+            ((operation.parameters.find { it.`in` == ParameterInputType.body } as ParameterV2).schema as ModelOrModelReference)
                 .`$ref`.should.equal("#/definitions/Rectangle")
             (operation.responses["201"] as ResponseV2).schema?.`$ref`.should.equal("#/definitions/Rectangles")
         }

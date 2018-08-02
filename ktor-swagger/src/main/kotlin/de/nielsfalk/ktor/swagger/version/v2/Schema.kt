@@ -1,12 +1,16 @@
 package de.nielsfalk.ktor.swagger.version.v2
 
+import de.nielsfalk.ktor.swagger.CustomContentTypeResponse
+import de.nielsfalk.ktor.swagger.HttpCodeResponse
+import de.nielsfalk.ktor.swagger.JsonResponseFromReflection
+import de.nielsfalk.ktor.swagger.JsonResponseSchema
 import de.nielsfalk.ktor.swagger.modelName
 import de.nielsfalk.ktor.swagger.responseDescription
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.HttpStatus
 import de.nielsfalk.ktor.swagger.version.shared.Information
 import de.nielsfalk.ktor.swagger.version.shared.ModelName
-import de.nielsfalk.ktor.swagger.version.shared.ModelReference
+import de.nielsfalk.ktor.swagger.version.shared.ModelOrModelReference
 import de.nielsfalk.ktor.swagger.version.shared.OperationBase
 import de.nielsfalk.ktor.swagger.version.shared.OperationCreator
 import de.nielsfalk.ktor.swagger.version.shared.ParameterBase
@@ -32,30 +36,56 @@ class Swagger : CommonBase {
 
 class Response(
     override val description: String,
-    val schema: ModelReference?
+    val schema: ModelOrModelReference? = null,
+    val produces: List<String>? = listOf("application/json")
 ) : ResponseBase {
 
     companion object : ResponseCreator {
-        override fun create(
+        override fun create(response: HttpCodeResponse): ResponseBase? {
+            return response.responseTypes.firstOrNull()?.let {
+                when (it) {
+                    is JsonResponseFromReflection -> create(
+                        response.statusCode,
+                        it.type,
+                        response.description
+                    )
+                    is JsonResponseSchema -> create(
+                        it.name
+                    )
+                    is CustomContentTypeResponse -> Response(
+                        description = when {
+                            response.description != null -> response.description
+                            else -> response.statusCode.description
+                        },
+                        produces = listOf(it.contentType.run { "$contentType/$contentSubtype" })
+                    )
+                }
+            }
+        }
+
+        fun create(
             httpStatusCode: HttpStatusCode,
             typeInfo: TypeInfo,
-            examples: Map<String, Example>
+            description: String?
         ): Response {
             return Response(
-                description = if (typeInfo.type == Unit::class) httpStatusCode.description else typeInfo.responseDescription(),
-                schema = if (typeInfo.type == Unit::class) null else ModelReference.create(
+                description = when {
+                    description != null -> description
+                    typeInfo.type == Unit::class -> httpStatusCode.description
+                    else -> typeInfo.responseDescription()
+                },
+                schema = if (typeInfo.type == Unit::class) null else ModelOrModelReference.create(
                     "#/definitions/" + typeInfo.modelName()
                 )
             )
         }
 
-        override fun create(
-            modelName: String,
-            examples: Map<String, Example>
+        fun create(
+            modelName: String
         ): Response {
             return Response(
                 description = modelName,
-                schema = ModelReference.create("#/definitions/" + modelName)
+                schema = ModelOrModelReference.create("#/definitions/" + modelName)
             )
         }
     }
@@ -98,7 +128,7 @@ class Parameter(
     val format: String? = null,
     val enum: List<String>? = null,
     val items: Property? = null,
-    val schema: ModelReference? = null
+    val schema: ModelOrModelReference? = null
 ) : ParameterBase {
     companion object : ParameterCreator {
 
@@ -119,7 +149,7 @@ class Parameter(
                 format = property.format,
                 enum = property.enum,
                 items = property.items,
-                schema = property.`$ref`?.let { ModelReference(it) }
+                schema = property.`$ref`?.let { ModelOrModelReference(it) }
             )
         }
     }

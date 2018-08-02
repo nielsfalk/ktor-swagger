@@ -9,6 +9,7 @@ import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.install
+import io.ktor.http.ContentType
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
 import io.ktor.routing.routing
@@ -87,6 +88,18 @@ class SwaggerTest {
                             notFound()
                         )
                 ) { _, _ -> }
+                get<toy>(
+                    "image"
+                        .description("A single toy, also returns image of toy for correct mime type")
+                        .responds(
+                            ok(
+                                json<ToyModel>(),
+                                contentTypeResponse(ContentType.Image.PNG),
+                                description = ""
+                            )
+                        )
+                ) {
+                }
                 post<toys, ToyModel>(
                     "create"
                         .responds(created<ToyModel>())

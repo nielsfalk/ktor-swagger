@@ -6,6 +6,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
+import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
@@ -26,7 +27,7 @@ import kotlin.reflect.KClass
 data class Metadata(
     internal val bodySchema: BodySchema? = null,
     internal val bodyExamples: Map<String, Example> = emptyMap(),
-    internal val responses: Map<HttpStatusCode, ResponseType> = emptyMap(),
+    internal val responses: List<HttpCodeResponse> = emptyList(),
     internal val summary: String? = null,
     internal val description: String? = null,
     internal val headers: KClass<*>? = null,
@@ -37,8 +38,25 @@ data class Metadata(
     inline fun <reified T> parameter(): Metadata = copy(parameter = T::class)
 }
 
-fun Metadata.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata =
-    copy(responses = (responses + mapOf(*pairs)))
+data class HttpCodeResponse(
+    internal val statusCode: HttpStatusCode,
+    internal val responseTypes: List<ResponseType>,
+    internal val description: String? = null
+)
+
+@PublishedApi
+internal fun singleResponse(
+    statusCode: HttpStatusCode,
+    responseType: ResponseType,
+    description: String? = null
+) = HttpCodeResponse(
+    statusCode,
+    listOf(responseType),
+    description
+)
+
+fun Metadata.responds(vararg responses: HttpCodeResponse): Metadata =
+    copy(responses = (this.responses + responses))
 
 fun Metadata.examples(vararg pairs: Pair<String, Example>): Metadata =
     copy(bodyExamples = (bodyExamples + mapOf(*pairs)))
@@ -99,18 +117,46 @@ fun example(
 /**
  * @receiver The summary to use for the operation.
  */
-fun String.responds(vararg pairs: Pair<HttpStatusCode, ResponseType>): Metadata =
-    Metadata(responses = mapOf(*pairs), summary = this)
+fun String.responds(vararg responses: HttpCodeResponse): Metadata =
+    Metadata(responses = listOf(*responses), summary = this)
 
-fun responds(vararg pairs: Pair<HttpStatusCode, ResponseType>) =
-    Metadata(responses = mapOf(*pairs))
+fun responds(vararg responses: HttpCodeResponse) =
+    Metadata(responses = listOf(*responses))
 
 sealed class ResponseType() {
     abstract val examples: Map<String, Example>
 }
 
-data class ResponseFromReflection(val type: TypeInfo, override val examples: Map<String, Example>) : ResponseType()
-data class ResponseSchema(val name: ModelName, override val examples: Map<String, Example>) : ResponseType()
+data class JsonResponseFromReflection
+internal constructor(
+    val type: TypeInfo,
+    override val examples: Map<String, Example>
+) : ResponseType() {
+    companion object {
+
+        @PublishedApi
+        internal fun create(type: TypeInfo, examples: Map<String, Example>) =
+            JsonResponseFromReflection(
+                type, examples
+            )
+    }
+}
+
+inline fun <reified T> json(vararg examples: Pair<String, Example> = arrayOf()): ResponseType =
+    JsonResponseFromReflection.create(typeInfo<T>(), mapOf(*examples))
+
+data class JsonResponseSchema
+internal constructor(
+    val name: ModelName,
+    override val examples: Map<String, Example>
+) : ResponseType()
+
+fun json(name: ModelName, vararg examples: Pair<String, Example>): ResponseType =
+    JsonResponseSchema(name, mapOf(*examples))
+
+data class CustomContentTypeResponse(val contentType: ContentType) : ResponseType() {
+    override val examples: Map<String, Example> = emptyMap()
+}
 
 /**
  * The type of the operation body being recived by the server.
@@ -122,45 +168,50 @@ sealed class BodyType {
 data class BodyFromReflection(val typeInfo: TypeInfo, override val examples: Map<String, Example>) : BodyType()
 data class BodyFromSchema(val name: ModelName, override val examples: Map<String, Example>) : BodyType()
 
-inline fun <reified T> ok(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = OK to ResponseFromReflection(
-    typeInfo<T>(), mapOf(*examples)
-)
+inline fun <reified T> ok(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    ok(json<T>(*examples))
 
-fun ok(name: String, vararg examples: Pair<String, Example> = arrayOf()) = OK to ResponseSchema(
-    name, mapOf(*examples)
-)
+fun ok(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    ok(json(name, *examples))
 
-inline fun <reified T> created(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = Created to ResponseFromReflection(
-    typeInfo<T>(), mapOf(*examples)
-)
+fun ok(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(OK, listOf(*responses), description)
 
-fun created(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = Created to ResponseSchema(
-    name, mapOf(*examples)
-)
+inline fun <reified T> created(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    created(json<T>(*examples))
 
-fun notFound(): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
-    typeInfo<Unit>(), emptyMap()
-)
+fun created(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    created(json(name, *examples))
 
-inline fun <reified T> notFound(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseFromReflection(
-    typeInfo<T>(), mapOf(*examples)
-)
+fun created(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(Created, listOf(*responses), description)
 
-fun notFound(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = NotFound to ResponseSchema(
-    name, mapOf(*examples)
-)
+fun notFound(): HttpCodeResponse =
+    notFound(json<Unit>())
 
-fun badRequest(): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseFromReflection(
-    typeInfo<Unit>(), emptyMap()
-)
+inline fun <reified T> notFound(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    notFound(json<T>(*examples))
 
-inline fun <reified T> badRequest(vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseFromReflection(
-    typeInfo<T>(), mapOf(*examples)
-)
+fun notFound(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    notFound(json(name, *examples))
 
-fun badRequest(name: String, vararg examples: Pair<String, Example> = arrayOf()): Pair<HttpStatusCode, ResponseType> = BadRequest to ResponseSchema(
-    name, mapOf(*examples)
-)
+fun notFound(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(NotFound, listOf(*responses), description)
+
+fun badRequest(): HttpCodeResponse =
+    badRequest(json<Unit>())
+
+inline fun <reified T> badRequest(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    badRequest(json<T>(*examples))
+
+fun badRequest(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    badRequest(json(name, *examples))
+
+fun badRequest(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(BadRequest, listOf(*responses), description)
+
+fun contentTypeResponse(contentType: ContentType): ResponseType =
+    CustomContentTypeResponse(contentType)
 
 @ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
