@@ -2,9 +2,7 @@ package de.nielsfalk.ktor.swagger
 
 import com.winterbe.expekt.should
 import de.nielsfalk.ktor.swagger.version.shared.Property
-import de.nielsfalk.ktor.swagger.version.v2.Operation
 import de.nielsfalk.ktor.swagger.version.v2.Parameter
-import de.nielsfalk.ktor.swagger.version.v2.Response
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
 import org.junit.Test
@@ -12,14 +10,16 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlin.reflect.full.memberProperties
 import kotlin.test.assertEquals
+import de.nielsfalk.ktor.swagger.version.v3.Parameter as ParameterV3
 
 class ModelExtractionTest {
-    private val variation = SpecVariation(
-        "#/definitions/",
-        Response,
-        Operation,
-        Parameter
-    )
+    companion object {
+        const val annotationDescription = "This field has a default"
+    }
+
+    private val variation = SwaggerSupport.swaggerVariation
+
+    private val openApiVariation = SwaggerSupport.openApiVariation
 
     private fun createModelData(typeInfo: TypeInfo) =
         variation.createModelData(typeInfo)
@@ -302,14 +302,60 @@ class ModelExtractionTest {
         property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInt")
     }
 
-    class Parameters(val optional: String?, val mandatory: String)
+    class Parameters(
+        val optional: String?,
+        val mandatory: String,
+        @DefaultValue("true")
+        @Description(annotationDescription)
+        val default: Boolean = true
+    )
 
     @Test
     fun `optional parameters`() {
         val map = variation { Parameters::class.memberProperties.map { it.toParameter("").first } }
 
-        map.find { it.name == "optional" }!!.required.should.equal(false)
-        map.find { it.name == "mandatory" }!!.required.should.equal(true)
+        map.find { it.name == "optional" }!!.run {
+            this as Parameter
+            required.should.equal(false)
+            type.should.equal("string")
+        }
+
+        map.find { it.name == "mandatory" }!!.run {
+            this as Parameter
+            required.should.equal(true)
+            type.should.equal("string")
+        }
+
+        map.find { it.name == "default" }!!.run {
+            this as Parameter
+            required.should.equal(false)
+            type.should.equal("boolean")
+            description.should.equal(annotationDescription)
+        }
+    }
+
+    @Test
+    fun `openapi optional parameters`() {
+        val map = openApiVariation { Parameters::class.memberProperties.map { it.toParameter("").first } }
+
+        map.find { it.name == "optional" }!!.run {
+            this as ParameterV3
+            required.should.equal(false)
+            (schema as Property).type.should.equal("string")
+        }
+
+        map.find { it.name == "mandatory" }!!.run {
+            this as ParameterV3
+            required.should.equal(true)
+            (schema as Property).type.should.equal("string")
+        }
+
+        map.find { it.name == "default" }!!.run {
+            this as ParameterV3
+            required.should.equal(false)
+            (schema as Property).type.should.equal("boolean")
+            description.should.equal(annotationDescription)
+        }
     }
 
     class TwoGenerics<J, K>(val jValue: J, val kValue: K)

@@ -11,6 +11,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
 import io.ktor.http.HttpStatusCode.Companion.Created
+import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
 import io.ktor.locations.delete
@@ -30,12 +31,14 @@ data class Metadata(
     internal val responses: List<HttpCodeResponse> = emptyList(),
     internal val summary: String? = null,
     internal val description: String? = null,
-    internal val headers: KClass<*>? = null,
-    internal val parameter: KClass<*>? = null
+    @PublishedApi
+    internal val headers: List<KClass<*>> = emptyList(),
+    @PublishedApi
+    internal val parameters: List<KClass<*>> = emptyList()
 ) {
-    inline fun <reified T> header(): Metadata = copy(headers = T::class)
+    inline fun <reified T> header(): Metadata = copy(headers = headers + T::class)
 
-    inline fun <reified T> parameter(): Metadata = copy(parameter = T::class)
+    inline fun <reified T> parameter(): Metadata = copy(parameters = parameters + T::class)
 }
 
 data class HttpCodeResponse(
@@ -209,6 +212,15 @@ fun badRequest(name: String, vararg examples: Pair<String, Example> = arrayOf())
 
 fun badRequest(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
     HttpCodeResponse(BadRequest, listOf(*responses), description)
+
+inline fun <reified T> internalServerError(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    internalServerError(json<T>(*examples))
+
+fun internalServerError(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    internalServerError(json(name, *examples))
+
+fun internalServerError(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(InternalServerError, listOf(*responses), description)
 
 fun contentTypeResponse(contentType: ContentType): ResponseType =
     CustomContentTypeResponse(contentType)

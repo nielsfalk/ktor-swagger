@@ -16,6 +16,7 @@ import io.ktor.routing.routing
 import io.ktor.server.testing.withTestApplication
 import org.junit.Before
 import org.junit.Test
+import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
 import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
@@ -44,6 +45,10 @@ data class ToysModel(val toys: MutableList<ToyModel>) {
     }
 }
 
+data class ErrorModel(
+    val message: String
+)
+
 const val toysLocation = "/toys/{id}"
 
 @Group("toy")
@@ -58,7 +63,12 @@ class toys
 @Location("/withParameter")
 class withParameter
 
-class Header(val optionalHeader: String?, val mandatoryHeader: Int)
+class Header(
+    val optionalHeader: String?,
+    val mandatoryHeader: Int,
+    @DefaultValue("false") val defaultHeader: Boolean = false
+)
+
 class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int)
 
 class SwaggerTest {
@@ -72,6 +82,16 @@ class SwaggerTest {
             install(SwaggerSupport) {
                 swagger = Swagger()
                 openApi = OpenApi()
+                openApiCustomization = {
+                    responds(
+                        internalServerError<ErrorModel>()
+                    )
+                }
+                swaggerCustomization = {
+                    responds(
+                        internalServerError<ErrorModel>()
+                    )
+                }
             }
         }) {
             // when:
@@ -107,15 +127,33 @@ class SwaggerTest {
                 get<toys>(
                     "all"
                         .responds(
-                        ok<ToysModel>(example("model", ToysModel.example)),
-                        notFound()
-                    )
+                            ok<ToysModel>(example("model", ToysModel.example)),
+                            notFound()
+                        )
                 ) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
             }
 
             this@SwaggerTest.swagger = application.swaggerUi.swagger!!
             this@SwaggerTest.openapi = application.swaggerUi.openApi!!
+        }
+    }
+
+    @Test
+    fun `swagger all paths have 500 response`() {
+        val responses = swagger.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
+        responses.should.be.size(5)
+        responses.map { it as ResponseV2 }.map { it.schema?.`$ref` }.forEach {
+            it.should.equal("#/definitions/ErrorModel")
+        }
+    }
+
+    @Test
+    fun `openapi all paths have 500 response`() {
+        val responses = openapi.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
+        responses.should.be.size(5)
+        responses.map { it as ResponseV3 }.map { it.content?.get("application/json")?.schema?.`$ref` }.forEach {
+            it.should.equal("#/components/schemas/ErrorModel")
         }
     }
 
@@ -244,5 +282,10 @@ class SwaggerTest {
         val mandatory = parameters?.find { it.name == "mandatoryHeader" }
         mandatory?.required.should.equal(true)
         mandatory?.`in`.should.equal(ParameterInputType.header)
+
+        val default = parameters?.find { it.name == "defaultHeader" }
+        default?.required.should.equal(false)
+        (default as ParameterV2).default.should.equal("false")
+        default?.`in`.should.equal(ParameterInputType.header)
     }
 }

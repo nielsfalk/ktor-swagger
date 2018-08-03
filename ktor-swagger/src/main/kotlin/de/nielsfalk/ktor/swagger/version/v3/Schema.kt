@@ -266,6 +266,7 @@ class Parameter(
             `in`: ParameterInputType,
             description: String?,
             required: Boolean,
+            default: String?,
             examples: Map<String, Example>
         ): ParameterBase {
             return Parameter(
@@ -273,7 +274,7 @@ class Parameter(
                 `in` = `in`,
                 description = description,
                 required = required,
-                schema = property,
+                schema = property.copy(default = default),
                 examples = examples
             )
         }

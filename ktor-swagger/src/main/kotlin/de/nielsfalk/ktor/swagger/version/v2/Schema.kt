@@ -128,6 +128,7 @@ class Parameter(
     val format: String? = null,
     val enum: List<String>? = null,
     val items: Property? = null,
+    val default: String? = null,
     val schema: ModelOrModelReference? = null
 ) : ParameterBase {
     companion object : ParameterCreator {
@@ -138,6 +139,7 @@ class Parameter(
             `in`: ParameterInputType,
             description: String?,
             required: Boolean,
+            default: String?,
             examples: Map<String, Example>
         ): Parameter {
             return Parameter(
@@ -149,6 +151,7 @@ class Parameter(
                 format = property.format,
                 enum = property.enum,
                 items = property.items,
+                default = default,
                 schema = property.`$ref`?.let { ModelOrModelReference(it) }
             )
         }
