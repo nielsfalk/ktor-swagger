@@ -62,6 +62,10 @@ internal class SpecVariation(
         inputType: ParameterInputType = if (path.contains("{$name}")) ParameterInputType.path else query
     ): Pair<ParameterBase, Collection<TypeInfo>> {
         val schemaAnnotation = annotations.firstOrNull { it is Schema } as? Schema
+        val required = !annotations.any { it is DefaultValue } && !returnType.isMarkedNullable
+        val defaultValue = annotations.firstOrNull { it is DefaultValue } as? DefaultValue
+        fun Property.determineDescription() =
+            annotations.mapNotNull { it as? Description }.firstOrNull()?.description ?: description ?: name
         return if (schemaAnnotation != null) {
             val property = Property(
                 `$ref` = "$modelRoot${schemaAnnotation.schema}"
@@ -70,8 +74,9 @@ internal class SpecVariation(
                 property,
                 name,
                 inputType,
-                description = null,
-                required = !returnType.isMarkedNullable
+                description = property.determineDescription(),
+                required = required,
+                default = defaultValue?.value
             ) to emptyTypeInfoList
         } else {
             toModelProperty().let {
@@ -79,7 +84,9 @@ internal class SpecVariation(
                     it.first,
                     name,
                     inputType,
-                    required = !returnType.isMarkedNullable
+                    it.first.determineDescription(),
+                    required = required,
+                    default = defaultValue?.value
                 ) to it.second
             }
         }
@@ -241,6 +248,7 @@ private val propertyTypes = mapOf(
     Int::class to Property("integer", "int32"),
     Long::class to Property("integer", "int64"),
     String::class to Property("string"),
+    Boolean::class to Property("boolean"),
     Double::class to Property("number", "double"),
     Instant::class to Property("string", "date-time"),
     Date::class to Property("string", "date-time"),

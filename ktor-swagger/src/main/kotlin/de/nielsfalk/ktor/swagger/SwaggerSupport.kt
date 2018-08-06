@@ -25,25 +25,37 @@ import io.ktor.util.AttributeKey
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
+import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
-import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 import de.nielsfalk.ktor.swagger.version.v3.Parameter as ParameterV3
-import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
+import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
 class SwaggerSupport(
     val swagger: Swagger?,
-    val openApi: OpenApi?
+    val swaggerCustomization: Metadata.(HttpMethod) -> Metadata,
+    val openApi: OpenApi?,
+    val openApiCustomization: Metadata.(HttpMethod) -> Metadata
 ) {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
         private val openApiJsonFileName = "openapi.json"
         private val swaggerJsonFileName = "swagger.json"
 
+        internal val swaggerVariation = SpecVariation("#/definitions/", ResponseV2, OperationV2, ParameterV2)
+        internal val openApiVariation = SpecVariation("#/components/schemas/", ResponseV3, OperationV3, ParameterV3)
+
         override val key = AttributeKey<SwaggerSupport>("SwaggerSupport")
 
         override fun install(pipeline: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
-            val (path, forwardRoot, provideUi, swagger, openApi) = SwaggerUiConfiguration().apply(configure)
-            val feature = SwaggerSupport(swagger, openApi)
+            val (path,
+                forwardRoot,
+                provideUi,
+                swagger,
+                openApi,
+                swaggerConfig,
+                openpapiConfig
+            ) = SwaggerUiConfiguration().apply(configure)
+            val feature = SwaggerSupport(swagger, swaggerConfig, openApi, openpapiConfig)
 
             val defaultJsonFile = when {
                 openApi != null -> openApiJsonFileName
@@ -88,57 +100,35 @@ class SwaggerSupport(
             when (it) {
                 is Swagger -> SwaggerBaseWithVariation(
                     it,
-                    SpecVariation("#/definitions/", ResponseV2, OperationV2, ParameterV2)
+                    swaggerCustomization,
+                    swaggerVariation
                 )
                 is OpenApi -> OpenApiBaseWithVariation(
                     it,
-                    SpecVariation("#/components/schemas/", ResponseV3, OperationV3, ParameterV3)
+                    openApiCustomization,
+                    openApiVariation
                 )
                 else -> throw IllegalStateException("Must be of type ${Swagger::class.simpleName} or ${OpenApi::class.simpleName}")
             }
         }
 
-    /**
-     * The [HttpMethod] types that don't support having a HTTP body element.
-     */
-    private val methodForbidsBody = setOf(HttpMethod.Get, HttpMethod.Delete)
-
     inline fun <reified LOCATION : Any, reified ENTITY_TYPE : Any> Metadata.apply(method: HttpMethod) {
         apply(LOCATION::class, typeInfo<ENTITY_TYPE>(), method)
     }
 
-    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
-        bodySchema?.let {
-            BodyFromSchema(
-                name = bodySchema.name ?: typeInfo.modelName(),
-                examples = bodyExamples
-            )
-        } ?: BodyFromReflection(typeInfo, bodyExamples)
-
-    private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
-        require(!(methodForbidsBody.contains(method) && bodySchema != null)) {
-            "Method type $method does not support a body parameter."
-        }
-
-    fun Metadata.apply(locationClass: KClass<*>, bodyTypeInfo: TypeInfo, method: HttpMethod) {
-        requireMethodSupportsBody(method)
-        val bodyType = createBodyType(bodyTypeInfo)
-        val clazz = locationClass.java
-        val location = clazz.getAnnotation(Location::class.java)
-        val tags = clazz.getAnnotation(Group::class.java)
-
+    @PublishedApi
+    internal fun Metadata.apply(locationClass: KClass<*>, bodyTypeInfo: TypeInfo, method: HttpMethod) {
         variations.forEach {
-            it.apply {
-                applyOperations(location, tags, method, locationClass, bodyType)
-            }
+            it.apply { metaDataConfiguration(method).apply(locationClass, bodyTypeInfo, method) }
         }
     }
 }
 
 private class SwaggerBaseWithVariation(
     base: Swagger,
+    metaDataConfiguration: Metadata.(HttpMethod) -> Metadata,
     variation: SpecVariation
-) : BaseWithVariation<Swagger>(base, variation) {
+) : BaseWithVariation<Swagger>(base, metaDataConfiguration, variation) {
 
     override val schemaHolder: MutableMap<ModelName, Any>
         get() = base.definitions
@@ -150,8 +140,9 @@ private class SwaggerBaseWithVariation(
 
 private class OpenApiBaseWithVariation(
     base: OpenApi,
+    metaDataConfiguration: Metadata.(HttpMethod) -> Metadata,
     variation: SpecVariation
-) : BaseWithVariation<OpenApi>(base, variation) {
+) : BaseWithVariation<OpenApi>(base, metaDataConfiguration, variation) {
     override val schemaHolder: MutableMap<ModelName, Any>
         get() = base.components.schemas
 
@@ -162,6 +153,7 @@ private class OpenApiBaseWithVariation(
 
 private abstract class BaseWithVariation<B : CommonBase>(
     val base: B,
+    val metaDataConfiguration: Metadata.(HttpMethod) -> Metadata,
     val variation: SpecVariation
 ) {
     abstract val schemaHolder: MutableMap<ModelName, Any>
@@ -206,19 +198,17 @@ private abstract class BaseWithVariation<B : CommonBase>(
         }
 
         fun createOperation(): OperationBase {
-            val responses = responses.map { (status, type) ->
-                val response = when (type) {
-                    is ResponseFromReflection -> {
-                        addDefinition(type.type)
-                        variation.reponseCreator.create(status, type.type, type.examples)
-                    }
-                    is ResponseSchema -> {
-                        variation.reponseCreator.create(type.name, type.examples)
+            val responses = responses.map { codeResponse ->
+                codeResponse.responseTypes.forEach {
+                    if (it is JsonResponseFromReflection) {
+                        addDefinition(it.type)
                     }
                 }
 
-                status.value.toString() to response
-            }.toMap()
+                val response = variation.reponseCreator.create(codeResponse)
+
+                codeResponse.statusCode.value.toString() to response
+            }.toMap().filterNullValues()
 
             val parameters = mutableListOf<ParameterBase>().apply {
                 variation {
@@ -239,8 +229,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
                             }
                         })
                     }
-                    parameter?.processToParameters(ParameterInputType.query)
-                    headers?.processToParameters(ParameterInputType.header)
+                    parameters.forEach { it.processToParameters(ParameterInputType.query) }
+                    headers.forEach { it.processToParameters(ParameterInputType.header) }
                 }
             }
 
@@ -262,6 +252,47 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 createOperation()
             )
     }
+
+    private fun <K : Any, V> Map<K, V?>.filterNullValues(): Map<K, V> {
+        val destination = mutableListOf<Pair<K, V>>()
+        forEach {
+            val valueSaved = it.value
+            if (valueSaved != null) {
+                destination.add(it.key to valueSaved)
+            }
+        }
+        return destination.toMap()
+    }
+
+    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
+        bodySchema?.let {
+            BodyFromSchema(
+                name = bodySchema.name ?: typeInfo.modelName(),
+                examples = bodyExamples
+            )
+        } ?: BodyFromReflection(typeInfo, bodyExamples)
+
+    private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
+        require(!(methodForbidsBody.contains(method) && bodySchema != null)) {
+            "Method type $method does not support a body parameter."
+        }
+
+    internal fun Metadata.apply(locationClass: KClass<*>, bodyTypeInfo: TypeInfo, method: HttpMethod) {
+        requireMethodSupportsBody(method)
+        val bodyType = createBodyType(bodyTypeInfo)
+        val clazz = locationClass.java
+        val location = clazz.getAnnotation(Location::class.java)
+        val tags = clazz.getAnnotation(Group::class.java)
+
+        applyOperations(location, tags, method, locationClass, bodyType)
+    }
+
+    companion object {
+        /**
+         * The [HttpMethod] types that don't support having a HTTP body element.
+         */
+        private val methodForbidsBody = setOf(HttpMethod.Get, HttpMethod.Delete)
+    }
 }
 
 data class SwaggerUiConfiguration(
@@ -269,5 +300,13 @@ data class SwaggerUiConfiguration(
     var forwardRoot: Boolean = false,
     var provideUi: Boolean = true,
     var swagger: Swagger? = null,
-    var openApi: OpenApi? = null
+    var openApi: OpenApi? = null,
+    /**
+     * Customization mutation applied to every [Metadata] processed for the swagger.json
+     */
+    var swaggerCustomization: Metadata.(HttpMethod) -> Metadata = { this },
+    /**
+     * Customization mutation applied to every [Metadata] processed for the openapi.json
+     */
+    var openApiCustomization: Metadata.(HttpMethod) -> Metadata = { this }
 )

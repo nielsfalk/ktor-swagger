@@ -1,11 +1,10 @@
 package de.nielsfalk.ktor.swagger.version.shared
 
+import de.nielsfalk.ktor.swagger.HttpCodeResponse
 import de.nielsfalk.ktor.swagger.Metadata
 import de.nielsfalk.ktor.swagger.toList
 import de.nielsfalk.ktor.swagger.version.v3.Example
-import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Location
 
 typealias ModelName = String
@@ -78,9 +77,21 @@ interface OperationCreator {
     ): OperationBase
 }
 
-class ModelReference(val `$ref`: String) {
+class ModelOrModelReference
+internal constructor(
+    val `$ref`: String? = null,
+    val type: String? = null,
+    val format: String? = null
+) {
     companion object {
-        fun create(modelName: String) = ModelReference(modelName)
+        fun create(modelName: String) =
+            ModelOrModelReference(modelName)
+
+        fun create(type: String, format: String? = null) =
+            ModelOrModelReference(
+                type = type,
+                format = format
+            )
     }
 }
 
@@ -98,6 +109,7 @@ interface ParameterCreator {
         `in`: ParameterInputType,
         description: String? = property.description ?: name,
         required: Boolean = true,
+        default: String? = null,
         examples: Map<String, Example> = emptyMap()
     ): ParameterBase
 }
@@ -107,16 +119,7 @@ interface ResponseBase {
 }
 
 interface ResponseCreator {
-    fun create(
-        httpStatusCode: HttpStatusCode,
-        typeInfo: TypeInfo,
-        examples: Map<String, Example>
-    ): ResponseBase
-
-    fun create(
-        modelName: String,
-        examples: Map<String, Example>
-    ): ResponseBase
+    fun create(response: HttpCodeResponse): ResponseBase?
 }
 
 enum class ParameterInputType {
@@ -135,6 +138,7 @@ data class Property(
     val enum: List<String>? = null,
     val items: Property? = null,
     val description: String? = null,
+    val default: String? = null,
     override val `$ref`: String? = null
 ) : RefHolder
 
