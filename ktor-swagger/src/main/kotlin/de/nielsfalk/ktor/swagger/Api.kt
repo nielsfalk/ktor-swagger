@@ -12,6 +12,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
 import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
+import io.ktor.http.HttpStatusCode.Companion.NoContent
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
 import io.ktor.locations.delete
@@ -179,6 +180,15 @@ fun ok(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCo
 
 fun ok(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
     HttpCodeResponse(OK, listOf(*responses), description)
+
+inline fun <reified T> noContent(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    noContent(json<T>(*examples))
+
+fun noContent(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    noContent(json(name, *examples))
+
+fun noContent(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(NoContent, listOf(*responses), description)
 
 inline fun <reified T> created(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
     created(json<T>(*examples))
