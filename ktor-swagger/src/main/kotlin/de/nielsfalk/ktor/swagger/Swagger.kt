@@ -110,6 +110,13 @@ internal class SpecVariation(
                     `in` = body,
                     examples = examples
                 )
+            is BodyFromString ->
+                parameterCreator.create(
+                        Property("string"),
+                        name = "body",
+                        description = "body",
+                        `in` = body
+                )
         }
 
     fun <T, R> KProperty1<T, R>.toModelProperty(reifiedType: Type? = null): Pair<Property, Collection<TypeInfo>> =

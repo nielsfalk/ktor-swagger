@@ -169,6 +169,7 @@ sealed class BodyType {
     abstract val examples: Map<String, Example>
 }
 
+data class BodyFromString(override val examples: Map<String, Example>): BodyType()
 data class BodyFromReflection(val typeInfo: TypeInfo, override val examples: Map<String, Example>) : BodyType()
 data class BodyFromSchema(val name: ModelName, override val examples: Map<String, Example>) : BodyType()
 

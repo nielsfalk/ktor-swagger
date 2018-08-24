@@ -194,6 +194,10 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 if (typeInfo.type != Unit::class) {
                     addDefinition(typeInfo)
                 }
+                listOf("application/json")
+            }
+            is BodyFromString -> {
+                listOf("text/plain")
             }
         }
 
@@ -264,13 +268,16 @@ private abstract class BaseWithVariation<B : CommonBase>(
         return destination.toMap()
     }
 
-    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
-        bodySchema?.let {
+    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType = when {
+        bodySchema != null -> {
             BodyFromSchema(
-                name = bodySchema.name ?: typeInfo.modelName(),
-                examples = bodyExamples
+                    name = bodySchema.name ?: typeInfo.modelName(),
+                    examples = bodyExamples
             )
-        } ?: BodyFromReflection(typeInfo, bodyExamples)
+        }
+        typeInfo.type == String::class -> BodyFromString(bodyExamples)
+        else -> BodyFromReflection(typeInfo, bodyExamples)
+    }
 
     private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
         require(!(methodForbidsBody.contains(method) && bodySchema != null)) {
