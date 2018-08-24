@@ -73,7 +73,7 @@ fun Metadata.noReflectionBody(name: ModelName): Metadata =
     copy(bodySchema = BodySchema(name))
 
 fun Metadata.security(requirements: Map<String, List<String>>): Metadata =
-        copy(requirements = this.requirements?.let {it + requirements} ?: listOf(requirements))
+        copy(requirements = this.requirements?.let { it + requirements } ?: listOf(requirements))
 /**
  * Defines the schema reference name for the body of the message of the incoming JSON object.
  */
@@ -122,12 +122,12 @@ fun example(
     id to Example(summary, description, value, externalValue, `$ref`)
 
 fun String.security(
-        requirements: Map<String, List<String>>
+    requirements: Map<String, List<String>>
 ): Metadata =
     Metadata(requirements = listOf(requirements), summary = this)
 
 fun security(
-        requirements: Map<String, List<String>>
+    requirements: Map<String, List<String>>
 ): Metadata =
     Metadata(requirements = listOf(requirements))
 
