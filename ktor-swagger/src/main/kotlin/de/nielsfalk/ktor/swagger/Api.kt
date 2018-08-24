@@ -32,6 +32,7 @@ data class Metadata(
     internal val responses: List<HttpCodeResponse> = emptyList(),
     internal val summary: String? = null,
     internal val description: String? = null,
+    internal val requirements: List<Map<String, List<String>>>? = null,
     @PublishedApi
     internal val headers: List<KClass<*>> = emptyList(),
     @PublishedApi
@@ -71,6 +72,8 @@ fun Metadata.description(description: String): Metadata =
 fun Metadata.noReflectionBody(name: ModelName): Metadata =
     copy(bodySchema = BodySchema(name))
 
+fun Metadata.security(requirements: Map<String, List<String>>): Metadata =
+        copy(requirements = this.requirements?.let {it + requirements} ?: listOf(requirements))
 /**
  * Defines the schema reference name for the body of the message of the incoming JSON object.
  */
@@ -117,6 +120,16 @@ fun example(
     `$ref`: String? = null
 ): Pair<String, Example> =
     id to Example(summary, description, value, externalValue, `$ref`)
+
+fun String.security(
+        requirements: Map<String, List<String>>
+): Metadata =
+    Metadata(requirements = listOf(requirements), summary = this)
+
+fun security(
+        requirements: Map<String, List<String>>
+): Metadata =
+    Metadata(requirements = listOf(requirements))
 
 /**
  * @receiver The summary to use for the operation.

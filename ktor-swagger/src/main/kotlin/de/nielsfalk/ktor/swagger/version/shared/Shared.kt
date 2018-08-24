@@ -43,6 +43,7 @@ interface OperationBase {
     val tags: List<Tag>?
     val summary: String
     val description: String?
+    val security: List<Map<String, List<String>>>?
 }
 
 interface OperationCreator {
@@ -63,7 +64,8 @@ interface OperationCreator {
             tags,
             summary,
             metadata.description,
-            examples
+            examples,
+            metadata.requirements
         )
     }
 
@@ -73,7 +75,8 @@ interface OperationCreator {
         tags: List<Tag>?,
         summary: String,
         description: String?,
-        examples: Map<String, Example>
+        examples: Map<String, Example>,
+        security: List<Map<String, List<String>>>?
     ): OperationBase
 }
 

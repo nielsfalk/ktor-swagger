@@ -96,7 +96,8 @@ class Operation(
     override val parameters: List<ParameterBase>,
     override val tags: List<Tag>?,
     override val summary: String,
-    override val description: String?
+    override val description: String?,
+    override val security: List<Map<String, List<String>>>?
 ) : OperationBase {
 
     companion object : OperationCreator {
@@ -106,14 +107,16 @@ class Operation(
             tags: List<Tag>?,
             summary: String,
             description: String?,
-            examples: Map<String, Example>
+            examples: Map<String, Example>,
+            security: List<Map<String, List<String>>>?
         ): OperationBase {
             return Operation(
                 responses,
                 parameters,
                 tags,
                 summary,
-                description
+                description,
+                security
             )
         }
     }
