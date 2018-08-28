@@ -44,6 +44,8 @@ class OpenApi : CommonBase {
     override val paths: Paths = mutableMapOf()
 
     val components: Components = Components()
+
+    var security: List<Map<String, List<String>>>? = null
 }
 
 class Components {
