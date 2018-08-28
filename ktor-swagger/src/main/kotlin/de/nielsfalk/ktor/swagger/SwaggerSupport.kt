@@ -189,16 +189,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
         bodyType: BodyType
     ) {
 
-        when (bodyType) {
-            is BodyFromReflection -> bodyType.typeInfo.let { typeInfo ->
-                if (typeInfo.type != Unit::class) {
-                    addDefinition(typeInfo)
-                }
-                listOf("application/json")
-            }
-            is BodyFromString -> {
-                listOf("text/plain")
-            }
+        if (bodyType is BodyFromReflection && bodyType.typeInfo.type != Unit::class) {
+            addDefinition(bodyType.typeInfo)
         }
 
         fun createOperation(): OperationBase {
