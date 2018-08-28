@@ -18,6 +18,7 @@ import org.junit.Before
 import org.junit.Test
 import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
+import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
 import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
@@ -96,6 +97,14 @@ class SwaggerTest {
         }) {
             // when:
             application.routing {
+                post<toy, String>(
+                    "new"
+                        .description("Put a toy string!")
+                        .responds(
+                            ok<ToyModel>(),
+                            notFound()
+                        )
+                ) { _, _ -> }
                 put<toy, ToyModel>(
                     "update"
                         .description("Update a toy!")
@@ -142,7 +151,7 @@ class SwaggerTest {
     @Test
     fun `swagger all paths have 500 response`() {
         val responses = swagger.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(5)
+        responses.should.be.size(6)
         responses.map { it as ResponseV2 }.map { it.schema?.`$ref` }.forEach {
             it.should.equal("#/definitions/ErrorModel")
         }
@@ -151,7 +160,7 @@ class SwaggerTest {
     @Test
     fun `openapi all paths have 500 response`() {
         val responses = openapi.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(5)
+        responses.should.be.size(6)
         responses.map { it as ResponseV3 }.map { it.content?.get("application/json")?.schema?.`$ref` }.forEach {
             it.should.equal("#/components/schemas/ErrorModel")
         }
@@ -287,5 +296,15 @@ class SwaggerTest {
         default?.required.should.equal(false)
         (default as ParameterV2).default.should.equal("false")
         default?.`in`.should.equal(ParameterInputType.header)
+    }
+
+    @Test
+    fun `request type of String should create the correct bodyType for v2`() {
+        (swagger.paths[toysLocation]?.get("post") as OperationV2).consumes.should.equal(listOf("text/plain"))
+    }
+
+    @Test
+    fun `request type of String should create the correct bodyType for v3`() {
+        (openapi.paths[toysLocation]?.get("post") as OperationV3).requestBody?.content?.keys.should.equal(setOf("text/plain"))
     }
 }
