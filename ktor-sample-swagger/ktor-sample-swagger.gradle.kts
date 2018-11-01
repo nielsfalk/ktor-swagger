@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.contracts.model.structure.UNKNOWN_COMPUTATION.type
+
 plugins {
     `application`
 }
@@ -13,5 +15,5 @@ dependencies {
 }
 
 application {
-    mainClassName = "de.nielsfalk.playground.ktor.swagger.JsonApplicationKt"
+    mainClassName = "de.nielsfalk.ktor.swagger.sample.JsonApplicationKt"
 }
