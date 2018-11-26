@@ -189,12 +189,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
         bodyType: BodyType
     ) {
 
-        when (bodyType) {
-            is BodyFromReflection -> bodyType.typeInfo.let { typeInfo ->
-                if (typeInfo.type != Unit::class) {
-                    addDefinition(typeInfo)
-                }
-            }
+        if (bodyType is BodyFromReflection && bodyType.typeInfo.type != Unit::class) {
+            addDefinition(bodyType.typeInfo)
         }
 
         fun createOperation(): OperationBase {
@@ -264,13 +260,16 @@ private abstract class BaseWithVariation<B : CommonBase>(
         return destination.toMap()
     }
 
-    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
-        bodySchema?.let {
+    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType = when {
+        bodySchema != null -> {
             BodyFromSchema(
-                name = bodySchema.name ?: typeInfo.modelName(),
-                examples = bodyExamples
+                    name = bodySchema.name ?: typeInfo.modelName(),
+                    examples = bodyExamples
             )
-        } ?: BodyFromReflection(typeInfo, bodyExamples)
+        }
+        typeInfo.type == String::class -> BodyFromString(bodyExamples)
+        else -> BodyFromReflection(typeInfo, bodyExamples)
+    }
 
     private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
         require(!(methodForbidsBody.contains(method) && bodySchema != null)) {

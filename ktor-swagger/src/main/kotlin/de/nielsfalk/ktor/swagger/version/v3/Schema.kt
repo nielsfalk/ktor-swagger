@@ -17,7 +17,6 @@ import de.nielsfalk.ktor.swagger.version.shared.ParameterCreator
 import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.shared.Paths
 import de.nielsfalk.ktor.swagger.version.shared.Property
-import de.nielsfalk.ktor.swagger.version.shared.RefHolder
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
 import de.nielsfalk.ktor.swagger.version.shared.Tag
@@ -222,7 +221,16 @@ class Operation(
 
             val requestBody: RequestBody? =
                 bodyParams.firstOrNull()?.let {
-                    val content = mapOf(
+                    val content = if (it.schema.type == "string") mapOf(
+                            "text/plain" to MediaTypeObject(
+                                    ModelOrModelReference(
+                                            type = "string"
+                                    ),
+                                    example = examples.values.firstOrNull()?.value,
+                                    examples = examples
+                            )
+                    )
+                    else mapOf(
                         "application/json" to MediaTypeObject(
                             ModelOrModelReference(
                                 `$ref` = it.schema.`$ref`!!
@@ -255,7 +263,7 @@ class Parameter(
     override val required: Boolean,
     val deprecated: Boolean = false,
     val allowEmptyValue: Boolean = true,
-    val schema: RefHolder,
+    val schema: Property,
     val example: Any? = null,
     val examples: Map<String, Example>? = null
 ) : ParameterBase {
