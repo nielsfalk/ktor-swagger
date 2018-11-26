@@ -232,6 +232,18 @@ fun internalServerError(name: String, vararg examples: Pair<String, Example> = a
 fun internalServerError(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
     HttpCodeResponse(InternalServerError, listOf(*responses), description)
 
+fun resetContent(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    HttpStatusCode.ResetContent(json(name, *examples))
+
+fun resetContent(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpStatusCode.ResetContent(*responses, description = description)
+
+operator fun HttpStatusCode.invoke(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    this(json(name, *examples))
+
+operator fun HttpStatusCode.invoke(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(this, listOf(*responses), description)
+
 fun contentTypeResponse(contentType: ContentType): ResponseType =
     CustomContentTypeResponse(contentType)
 
