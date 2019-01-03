@@ -8,10 +8,10 @@ import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.install
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
-import io.ktor.pipeline.ContextDsl
 import io.ktor.routing.Routing
 import io.ktor.routing.routing
 import io.ktor.server.testing.withTestApplication
+import io.ktor.util.pipeline.ContextDsl
 import org.junit.Test
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2

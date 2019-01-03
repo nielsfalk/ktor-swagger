@@ -32,7 +32,7 @@ allprojects {
         plugin("com.diffplug.gradle.spotless")
     }
     group = "de.nielsfalk.ktor"
-    version = "0.3.1"
+    version = "0.4.0"
 
     repositories {
         mavenCentral()
@@ -42,7 +42,7 @@ allprojects {
 }
 
 fun DependencyHandler.ktor(name: String) =
-    create(group = "io.ktor", name = name, version = "0.9.3")
+    create(group = "io.ktor", name = name, version = "1.1.1")
 
 subprojects {
     apply {
@@ -60,11 +60,6 @@ subprojects {
         "testImplementation"(ktor("ktor-server-test-host"))
         "testImplementation"(ktor("ktor-gson"))
         "testImplementation"(group = "com.winterbe", name = "expekt", version = "0.5.0")
-    }
-
-    kotlin {
-        // Enable coroutines supports for Kotlin.
-        experimental.coroutines = Coroutines.ENABLE
     }
 
     spotless {
@@ -131,7 +126,7 @@ allprojects {
     pluginManager.withPlugin("jacoco") {
         // If this project has the plugin applied, configure the tool version.
         jacoco {
-            toolVersion = "0.8.1"
+            toolVersion = "0.8.2"
         }
     }
 }

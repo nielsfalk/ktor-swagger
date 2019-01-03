@@ -1,12 +1,12 @@
 package de.nielsfalk.ktor.swagger
 
 import io.ktor.application.ApplicationCall
-import io.ktor.content.OutgoingContent
 import io.ktor.http.ContentType
 import io.ktor.http.ContentType.Image.PNG
 import io.ktor.http.ContentType.Text.CSS
 import io.ktor.http.ContentType.Text.Html
 import io.ktor.http.ContentType.Text.JavaScript
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.withCharset
 import io.ktor.response.respond
 import java.net.URL
