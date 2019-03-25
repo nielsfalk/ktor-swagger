@@ -88,7 +88,7 @@ class SwaggerSupport(
         }
 
         private suspend fun PipelineContext<Unit, ApplicationCall>.redirect(path: String, defaultJsonFile: String) {
-            call.respondRedirect("/$path/index.html?url=$defaultJsonFile")
+            call.respondRedirect("/$path/index.html?url=./$defaultJsonFile")
         }
     }
 
