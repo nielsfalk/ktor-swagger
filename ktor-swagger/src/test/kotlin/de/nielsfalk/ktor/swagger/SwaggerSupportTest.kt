@@ -27,15 +27,15 @@ class SwaggerSupportTest {
         handleRequest(
             HttpMethod.Get,
             "/"
-        ).response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        ).response.headers["Location"].should.equal("/apidocs/index.html?url=./swagger.json")
         handleRequest(
             HttpMethod.Get,
             "/apidocs"
-        ).response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        ).response.headers["Location"].should.equal("/apidocs/index.html?url=./swagger.json")
         handleRequest(
             HttpMethod.Get,
             "/apidocs/"
-        ).response.headers["Location"].should.equal("/apidocs/index.html?url=swagger.json")
+        ).response.headers["Location"].should.equal("/apidocs/index.html?url=./swagger.json")
     }
 
     @Test
