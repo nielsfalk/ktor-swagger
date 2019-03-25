@@ -8,6 +8,19 @@ This project provides a library that allows you you to integrate the
 
 An example efrom the `ktor-sample-swagger` is deployed on [heroku](https://ktor-swagger.herokuapp.com/).
 
+## When using this with Jackson
+
+By default, Jackson includes fields with null values in the JSON output that it generates. This results in `swagger.json` and `openapi.json` files that cannot be processed by Swagger UI properly, leading to error messages while parsing the type and format info of parameters. To prevent this, install Jackson content negotiation as follows:
+
+```
+install(ContentNegotiation) {
+    jackson {
+        setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        // (You can add additional Jackson config stuff here, such as registerModules(JavaTimeModule()), etc.)
+    }
+}
+```
+
 ## Example Usage
 
 This library adds some extension function that build on the ktor routing feature to provide an API
