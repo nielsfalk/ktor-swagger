@@ -12,7 +12,7 @@ An example efrom the `ktor-sample-swagger` is deployed on [heroku](https://ktor-
 
 By default, Jackson includes fields with null values in the JSON output that it generates. This results in `swagger.json` and `openapi.json` files that cannot be processed by Swagger UI properly, leading to error messages while parsing the type and format info of parameters. To prevent this, install Jackson content negotiation as follows:
 
-```
+```kotlin
 install(ContentNegotiation) {
     jackson {
         setSerializationInclusion(JsonInclude.Include.NON_NULL)
