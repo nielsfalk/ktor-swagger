@@ -17,6 +17,7 @@ import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
 import io.ktor.locations.delete
 import io.ktor.locations.get
+import io.ktor.locations.patch
 import io.ktor.locations.post
 import io.ktor.locations.put
 import io.ktor.pipeline.ContextDsl
@@ -258,6 +259,20 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
     }
 
     return post<LOCATION> {
+        body(this, it, call.receive())
+    }
+}
+
+@ContextDsl
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.patch(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
+): Route {
+    application.swaggerUi.apply {
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Patch)
+    }
+
+    return patch<LOCATION> {
         body(this, it, call.receive())
     }
 }

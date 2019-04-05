@@ -13,6 +13,7 @@ import de.nielsfalk.ktor.swagger.examples
 import de.nielsfalk.ktor.swagger.get
 import de.nielsfalk.ktor.swagger.notFound
 import de.nielsfalk.ktor.swagger.ok
+import de.nielsfalk.ktor.swagger.patch
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
 import de.nielsfalk.ktor.swagger.responds
@@ -214,6 +215,18 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                     ok<PetModel>(),
                     notFound()
                 )
+            ) { params, entity ->
+                if (data.pets.removeIf { it.id == params.id && it.id == entity.id }) {
+                    data.pets.add(entity)
+                    call.respond(entity)
+                }
+            }
+
+            patch<pet, PetModel>(
+                    "update with patch".responds(
+                            ok<PetModel>(),
+                            notFound()
+                    )
             ) { params, entity ->
                 if (data.pets.removeIf { it.id == params.id && it.id == entity.id }) {
                     data.pets.add(entity)
