@@ -117,6 +117,18 @@ class SwaggerTest {
                             notFound()
                         )
                 ) { _, _ -> }
+                patch<toy, ToyModel>(
+                    "change"
+                        .description("Change a toy!")
+                        .examples(
+                            example("kite", ToyModel.kiteExample),
+                            example("train", ToyModel.trainExample)
+                        )
+                        .responds(
+                            ok<ToyModel>(),
+                            notFound()
+                        )
+                ) { _, _ -> }
                 get<toy>(
                     "image"
                         .description("A single toy, also returns image of toy for correct mime type")
@@ -151,7 +163,7 @@ class SwaggerTest {
     @Test
     fun `swagger all paths have 500 response`() {
         val responses = swagger.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(6)
+        responses.should.be.size(7)
         responses.map { it as ResponseV2 }.map { it.schema?.`$ref` }.forEach {
             it.should.equal("#/definitions/ErrorModel")
         }
@@ -160,7 +172,7 @@ class SwaggerTest {
     @Test
     fun `openapi all paths have 500 response`() {
         val responses = openapi.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(6)
+        responses.should.be.size(7)
         responses.map { it as ResponseV3 }.map { it.content?.get("application/json")?.schema?.`$ref` }.forEach {
             it.should.equal("#/components/schemas/ErrorModel")
         }
@@ -252,10 +264,24 @@ class SwaggerTest {
     }
 
     @Test
+    fun `swagger patch toy operation labeled create`() {
+        val responses = swagger.paths[toysLocation]?.get("patch")?.responses
+
+        responses?.keys.should.contain("200")
+    }
+
+    @Test
     fun `openapi post toy operation labeled create`() {
         val responses = openapi.paths[toyLocation]?.get("post")?.responses
 
         responses?.keys.should.contain("201")
+    }
+
+    @Test
+    fun `openapi patch toy operation labeled ok`() {
+        val responses = openapi.paths[toysLocation]?.get("patch")?.responses
+
+        responses?.keys.should.contain("200")
     }
 
     @Test
