@@ -16,12 +16,12 @@ import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
 import io.ktor.http.HttpMethod
 import io.ktor.locations.Location
-import io.ktor.pipeline.PipelineContext
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
+import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
@@ -88,7 +88,7 @@ class SwaggerSupport(
         }
 
         private suspend fun PipelineContext<Unit, ApplicationCall>.redirect(path: String, defaultJsonFile: String) {
-            call.respondRedirect("/$path/index.html?url=$defaultJsonFile")
+            call.respondRedirect("/$path/index.html?url=./$defaultJsonFile")
         }
     }
 
@@ -189,12 +189,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
         bodyType: BodyType
     ) {
 
-        when (bodyType) {
-            is BodyFromReflection -> bodyType.typeInfo.let { typeInfo ->
-                if (typeInfo.type != Unit::class) {
-                    addDefinition(typeInfo)
-                }
-            }
+        if (bodyType is BodyFromReflection && bodyType.typeInfo.type != Unit::class) {
+            addDefinition(bodyType.typeInfo)
         }
 
         fun createOperation(): OperationBase {
@@ -264,13 +260,16 @@ private abstract class BaseWithVariation<B : CommonBase>(
         return destination.toMap()
     }
 
-    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType =
-        bodySchema?.let {
+    private fun Metadata.createBodyType(typeInfo: TypeInfo): BodyType = when {
+        bodySchema != null -> {
             BodyFromSchema(
-                name = bodySchema.name ?: typeInfo.modelName(),
-                examples = bodyExamples
+                    name = bodySchema.name ?: typeInfo.modelName(),
+                    examples = bodyExamples
             )
-        } ?: BodyFromReflection(typeInfo, bodyExamples)
+        }
+        typeInfo.type == String::class -> BodyFromString(bodyExamples)
+        else -> BodyFromReflection(typeInfo, bodyExamples)
+    }
 
     private fun Metadata.requireMethodSupportsBody(method: HttpMethod) =
         require(!(methodForbidsBody.contains(method) && bodySchema != null)) {

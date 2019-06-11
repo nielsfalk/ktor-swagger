@@ -17,6 +17,7 @@ import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
 import io.ktor.locations.delete
 import io.ktor.locations.get
+import io.ktor.locations.patch
 import io.ktor.locations.post
 import io.ktor.locations.put
 import io.ktor.pipeline.ContextDsl
@@ -182,6 +183,7 @@ sealed class BodyType {
     abstract val examples: Map<String, Example>
 }
 
+data class BodyFromString(override val examples: Map<String, Example>) : BodyType()
 data class BodyFromReflection(val typeInfo: TypeInfo, override val examples: Map<String, Example>) : BodyType()
 data class BodyFromSchema(val name: ModelName, override val examples: Map<String, Example>) : BodyType()
 
@@ -245,6 +247,18 @@ fun internalServerError(name: String, vararg examples: Pair<String, Example> = a
 fun internalServerError(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
     HttpCodeResponse(InternalServerError, listOf(*responses), description)
 
+fun resetContent(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    HttpStatusCode.ResetContent(json(name, *examples))
+
+fun resetContent(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpStatusCode.ResetContent(*responses, description = description)
+
+operator fun HttpStatusCode.invoke(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    this(json(name, *examples))
+
+operator fun HttpStatusCode.invoke(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(this, listOf(*responses), description)
+
 fun contentTypeResponse(contentType: ContentType): ResponseType =
     CustomContentTypeResponse(contentType)
 
@@ -258,6 +272,20 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
     }
 
     return post<LOCATION> {
+        body(this, it, call.receive())
+    }
+}
+
+@ContextDsl
+inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.patch(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
+): Route {
+    application.swaggerUi.apply {
+        metadata.apply<LOCATION, ENTITY>(HttpMethod.Patch)
+    }
+
+    return patch<LOCATION> {
         body(this, it, call.receive())
     }
 }

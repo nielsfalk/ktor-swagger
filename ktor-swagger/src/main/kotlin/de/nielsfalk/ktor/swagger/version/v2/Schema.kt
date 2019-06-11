@@ -97,7 +97,8 @@ class Operation(
     override val tags: List<Tag>?,
     override val summary: String,
     override val description: String?,
-    override val security: List<Map<String, List<String>>>?
+    override val security: List<Map<String, List<String>>>?,
+    val consumes: List<String>?
 ) : OperationBase {
 
     companion object : OperationCreator {
@@ -110,13 +111,19 @@ class Operation(
             examples: Map<String, Example>,
             security: List<Map<String, List<String>>>?
         ): OperationBase {
+            val consumes = parameters.filter { it.`in` == ParameterInputType.body }.firstOrNull()?.let {
+                if ((it as Parameter).type == "string") listOf("text/plain")
+                else listOf("application/json")
+            } ?: listOf()
+
             return Operation(
                 responses,
                 parameters,
                 tags,
                 summary,
                 description,
-                security
+                security,
+                consumes
             )
         }
     }

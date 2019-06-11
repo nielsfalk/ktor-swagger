@@ -32,7 +32,7 @@ allprojects {
         plugin("com.diffplug.gradle.spotless")
     }
     group = "de.nielsfalk.ktor"
-    version = "0.3.1"
+    version = "0.5.0"
 
     repositories {
         mavenCentral()
@@ -42,7 +42,7 @@ allprojects {
 }
 
 fun DependencyHandler.ktor(name: String) =
-    create(group = "io.ktor", name = name, version = "0.9.3")
+    create(group = "io.ktor", name = name, version = "1.1.1")
 
 subprojects {
     apply {
@@ -60,11 +60,6 @@ subprojects {
         "testImplementation"(ktor("ktor-server-test-host"))
         "testImplementation"(ktor("ktor-gson"))
         "testImplementation"(group = "com.winterbe", name = "expekt", version = "0.5.0")
-    }
-
-    kotlin {
-        // Enable coroutines supports for Kotlin.
-        experimental.coroutines = Coroutines.ENABLE
     }
 
     spotless {
@@ -94,27 +89,29 @@ subprojects {
     }
 }
 
-val jacocoRootReport = task<JacocoReport>("jacocoRootReport") {
+val jacocoRootReport = tasks.register<JacocoReport>("jacocoRootReport") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
-    description = "Generates code coverage report for all sub-projects."
+    description = "Generates an HTML code coverage report for all sub-projects."
 
     val jacocoReportTasks =
-        subprojects.map { it.tasks["jacocoTestReport"] as JacocoReport }
+        subprojects
+            .asSequence()
+            .filter {
+                // Filter out source sets that don't have tests in them
+                // Otherwise, Jacoco tries to generate coverage data for tests that don't exist
+                !it.java.sourceSets["test"].allSource.isEmpty
+            }
+            .map { it.tasks["jacocoTestReport"] as JacocoReport }
+            .toList()
     dependsOn(jacocoReportTasks)
 
-    val allExecutionData = jacocoReportTasks.map { it.executionData }
-    executionData(*allExecutionData.toTypedArray())
-
-    // Pre-initialize these to empty collections to prevent NPE on += call below.
-    additionalSourceDirs = files()
-    sourceDirectories = files()
-    classDirectories = files()
+    executionData.setFrom(Callable { jacocoReportTasks.map { it.executionData } })
 
     subprojects.forEach { testedProject ->
         val sourceSets = testedProject.java.sourceSets
-        this@task.additionalSourceDirs = this@task.additionalSourceDirs?.plus(files(sourceSets["main"].allSource.srcDirs))
-        this@task.sourceDirectories += files(sourceSets["main"].allSource.srcDirs)
-        this@task.classDirectories += files(sourceSets["main"].output)
+        val mainSourceSet = sourceSets["main"]
+        this@register.additionalSourceDirs(mainSourceSet.allSource.sourceDirectories)
+        this@register.additionalClassDirs(mainSourceSet.output)
     }
 
     reports {
@@ -129,7 +126,7 @@ allprojects {
     pluginManager.withPlugin("jacoco") {
         // If this project has the plugin applied, configure the tool version.
         jacoco {
-            toolVersion = "0.8.1"
+            toolVersion = "0.8.2"
         }
     }
 }
@@ -172,7 +169,6 @@ project(":ktor-swagger") {
     }
 }
 
-
 /**
  * Heroku will invoke this task if it is present.
  * https://devcenter.heroku.com/articles/deploying-gradle-apps-on-heroku#verify-that-your-build-file-is-set-up-correctly
@@ -183,8 +179,8 @@ task("stage") {
     dependsOn(":ktor-sample-swagger:installDist")
 }
 
-task<Wrapper>("wrapper") {
-    gradleVersion = "4.8"
+tasks.withType<Wrapper>().configureEach {
+    gradleVersion = "5.1"
     distributionType = Wrapper.DistributionType.ALL
 }
 
