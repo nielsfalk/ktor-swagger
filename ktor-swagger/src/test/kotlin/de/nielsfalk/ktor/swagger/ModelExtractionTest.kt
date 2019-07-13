@@ -319,7 +319,7 @@ class ModelExtractionTest {
         val mandatory: String,
         @DefaultValue("true")
         @Description(annotationDescription)
-        val default: Boolean = true,
+        val default: Boolean = true
     )
 
     @Test
