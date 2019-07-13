@@ -9,3 +9,6 @@ annotation class DefaultValue(
 annotation class Description(
     val description: String
 )
+
+@Target(AnnotationTarget.PROPERTY)
+annotation class Ignore
