@@ -320,8 +320,6 @@ class ModelExtractionTest {
         @DefaultValue("true")
         @Description(annotationDescription)
         val default: Boolean = true,
-        @Ignore
-        val ignorable: String = "ignoreMe"
     )
 
     @Test
