@@ -33,6 +33,7 @@ import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.findAnnotation
 
 /**
  * Gets the [Application.swaggerUi] feature
@@ -218,7 +219,8 @@ internal class SpecVariation(
     fun createModelData(typeInfo: TypeInfo): ModelDataWithDiscoveredTypeInfo {
         val collectedClassesToRegister = mutableListOf<TypeInfo>()
         val modelProperties =
-            typeInfo.type.memberProperties.map {
+            typeInfo.type.memberProperties.mapNotNull {
+                if (it.findAnnotation<Ignore>() != null) return@mapNotNull null
                 val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
                 collectedClassesToRegister.addAll(propertiesWithCollected.second)
                 it.name to propertiesWithCollected.first

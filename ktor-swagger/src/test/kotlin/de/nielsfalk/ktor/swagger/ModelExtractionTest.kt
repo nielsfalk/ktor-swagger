@@ -134,6 +134,18 @@ class ModelExtractionTest {
         )
     }
 
+    class ModelWithElementToIgnore(val returnMe: String, @Ignore val ignoreMe: String)
+
+    @Test
+    fun `model with property to ignore`() {
+        val model =
+                createModelData(typeInfo<ModelWithElementToIgnore>())
+        val returnedProperty = model.first.properties["returnMe"]!!
+
+        returnedProperty.type.should.equal("string")
+        model.first.properties["ignoreMe"].should.equal(null)
+    }
+
     class ModelWithGenericSet<T>(val something: Set<T>)
 
     @Test
