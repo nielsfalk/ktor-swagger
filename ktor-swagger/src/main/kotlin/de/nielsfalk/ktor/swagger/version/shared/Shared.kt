@@ -44,6 +44,7 @@ interface OperationBase {
     val summary: String
     val description: String?
     val security: List<Map<String, List<String>>>?
+    val operationId: String?
 }
 
 interface OperationCreator {
@@ -54,7 +55,8 @@ interface OperationCreator {
         location: Location,
         group: Group?,
         method: HttpMethod,
-        examples: Map<String, Example>
+        examples: Map<String, Example>,
+        operationId: String?
     ): OperationBase {
         val tags = group?.toList()
         val summary = metadata.summary ?: "${method.value} ${location.path}"
@@ -65,7 +67,8 @@ interface OperationCreator {
             summary,
             metadata.description,
             examples,
-            metadata.requirements
+            metadata.requirements,
+            operationId
         )
     }
 
@@ -76,7 +79,8 @@ interface OperationCreator {
         summary: String,
         description: String?,
         examples: Map<String, Example>,
-        security: List<Map<String, List<String>>>?
+        security: List<Map<String, List<String>>>?,
+        operationId: String?
     ): OperationBase
 }
 

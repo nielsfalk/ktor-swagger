@@ -9,6 +9,7 @@ import de.nielsfalk.ktor.swagger.created
 import de.nielsfalk.ktor.swagger.delete
 import de.nielsfalk.ktor.swagger.description
 import de.nielsfalk.ktor.swagger.example
+import de.nielsfalk.ktor.swagger.operationId
 import de.nielsfalk.ktor.swagger.examples
 import de.nielsfalk.ktor.swagger.get
 import de.nielsfalk.ktor.swagger.notFound
@@ -246,7 +247,7 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
             get<shapes>(
                 "all".responds(
                     ok("Rectangle")
-                )
+                ).operationId("getAllShapes")
             ) {
                 call.respondText(
                     """
