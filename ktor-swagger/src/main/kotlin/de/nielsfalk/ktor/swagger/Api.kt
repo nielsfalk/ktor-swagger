@@ -62,8 +62,8 @@ internal fun singleResponse(
     description
 )
 
-fun Metadata.operationId(operationId:String) : Metadata =
-    copy(operationId=operationId)
+fun Metadata.operationId(operationId: String): Metadata =
+    copy(operationId = operationId)
 
 fun Metadata.responds(vararg responses: HttpCodeResponse): Metadata =
     copy(responses = (this.responses + responses))
