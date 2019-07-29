@@ -198,6 +198,7 @@ class Operation(
     override val summary: String,
     override val description: String?,
     override val security: List<Map<String, List<String>>>?,
+    override val operationId: String?,
     val requestBody: RequestBody?
 ) : OperationBase {
 
@@ -209,7 +210,8 @@ class Operation(
             summary: String,
             description: String?,
             examples: Map<String, Example>,
-            security: List<Map<String, List<String>>>?
+            security: List<Map<String, List<String>>>?,
+            operationId: String?
         ): OperationBase {
             val bodyParams =
                 parameters
@@ -255,7 +257,8 @@ class Operation(
                 summary,
                 description,
                 security,
-                requestBody = requestBody
+                requestBody = requestBody,
+                operationId = operationId
             )
         }
     }

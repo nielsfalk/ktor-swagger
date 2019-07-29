@@ -139,6 +139,7 @@ class SwaggerTest {
                                 description = ""
                             )
                         )
+                        .operationId("fetchToyImage")
                 ) {
                 }
                 post<toys, ToyModel>(
@@ -275,6 +276,13 @@ class SwaggerTest {
         val responses = openapi.paths[toyLocation]?.get("post")?.responses
 
         responses?.keys.should.contain("201")
+    }
+
+    @Test
+    fun `openapi get toy should have operationId fetchToyImage `() {
+        val actualOperationId = openapi.paths[toysLocation]?.get("get")?.operationId
+
+        actualOperationId.should.contain("fetchToyImage")
     }
 
     @Test

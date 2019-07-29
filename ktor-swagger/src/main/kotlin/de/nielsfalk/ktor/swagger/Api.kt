@@ -37,7 +37,8 @@ data class Metadata(
     @PublishedApi
     internal val headers: List<KClass<*>> = emptyList(),
     @PublishedApi
-    internal val parameters: List<KClass<*>> = emptyList()
+    internal val parameters: List<KClass<*>> = emptyList(),
+    internal val operationId: String? = null
 ) {
     inline fun <reified T> header(): Metadata = copy(headers = headers + T::class)
 
@@ -60,6 +61,9 @@ internal fun singleResponse(
     listOf(responseType),
     description
 )
+
+fun Metadata.operationId(operationId:String) : Metadata =
+    copy(operationId=operationId)
 
 fun Metadata.responds(vararg responses: HttpCodeResponse): Metadata =
     copy(responses = (this.responses + responses))

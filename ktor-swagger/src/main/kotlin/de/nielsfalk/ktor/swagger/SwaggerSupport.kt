@@ -237,7 +237,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
                 location,
                 group,
                 method,
-                bodyExamples
+                bodyExamples,
+                operationId
             )
         }
 
