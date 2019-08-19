@@ -24,8 +24,8 @@ class ModelExtractionTest {
     private fun createModelData(typeInfo: TypeInfo) =
         variation.createModelData(typeInfo)
 
-    private inline fun <reified T> createAndExtractModelData() =
-        createModelData(typeInfo<T>()).first
+    private inline fun <reified T> createAndExtractObjectModelData() =
+        createModelData(typeInfo<T>()).first as ObjectModel
 
     enum class EnumClass {
         first, second, third
@@ -36,7 +36,7 @@ class ModelExtractionTest {
     @Test
     fun `enum Property`() {
 
-        val property = createAndExtractModelData<EnumModel>()
+        val property = createAndExtractObjectModelData<EnumModel>()
             .properties["enumValue"] as Property
 
         property.type.should.equal("string")
@@ -47,7 +47,7 @@ class ModelExtractionTest {
 
     @Test
     fun `instant Property`() {
-        val property = createAndExtractModelData<InstantModel>()
+        val property = createAndExtractObjectModelData<InstantModel>()
             .properties["timestamp"] as Property
 
         property.type.should.equal("string")
@@ -58,7 +58,7 @@ class ModelExtractionTest {
 
     @Test
     fun `localDate Property`() {
-        val property = createAndExtractModelData<LocalDateModel>()
+        val property = createAndExtractObjectModelData<LocalDateModel>()
             .properties["birthDate"] as Property
 
         property.type.should.equal("string")
@@ -69,7 +69,7 @@ class ModelExtractionTest {
 
     @Test
     fun `long Property`() {
-        val property = createAndExtractModelData<LongModel>()
+        val property = createAndExtractObjectModelData<LongModel>()
             .properties["long"] as Property
 
         property.type.should.equal("integer")
@@ -80,7 +80,7 @@ class ModelExtractionTest {
 
     @Test
     fun `double Property`() {
-        val property = createAndExtractModelData<DoubleModel>()
+        val property = createAndExtractObjectModelData<DoubleModel>()
             .properties["double"] as Property
 
         property.type.should.equal("number")
@@ -94,7 +94,7 @@ class ModelExtractionTest {
     fun `reference model property`() {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelProperty>())
-        val property = modelWithDiscovered.first.properties["something"] as Property
+        val property = (modelWithDiscovered.first as ObjectModel).properties["something"] as Property
 
         property.`$ref`.should.equal("#/definitions/PropertyModel")
         assertEqualTypeInfo(
@@ -108,7 +108,7 @@ class ModelExtractionTest {
     @Test
     fun `string array`() {
 
-        val property = createAndExtractModelData<ModelStringArray>()
+        val property = createAndExtractObjectModelData<ModelStringArray>()
             .properties["something"] as Property
 
         property.type.should.equal("array")
@@ -123,11 +123,24 @@ class ModelExtractionTest {
     fun `reified generic list types`() {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelWithGenericList<SubModelElement>>())
-        val property = modelWithDiscovered.first.properties["something"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["something"]!!
 
         property.type.should.equal("array")
         property.items?.`$ref`.should.equal("#/definitions/SubModelElement")
 
+        assertEqualTypeInfo(
+            typeInfo<SubModelElement>(),
+            modelWithDiscovered.second.first()
+        )
+    }
+
+    @Test
+    fun `top level reified generic list types`() {
+        val modelWithDiscovered = createModelData(typeInfo<List<SubModelElement>>())
+        val model = modelWithDiscovered.first as ArrayModel
+
+        model.items.`$ref`.should.equal("#/definitions/SubModelElement")
+        model.uniqueItems.should.equal(false)
         assertEqualTypeInfo(
             typeInfo<SubModelElement>(),
             modelWithDiscovered.second.first()
@@ -140,10 +153,10 @@ class ModelExtractionTest {
     fun `model with property to ignore`() {
         val model =
                 createModelData(typeInfo<ModelWithElementToIgnore>())
-        val returnedProperty = model.first.properties["returnMe"]!!
+        val returnedProperty = (model.first as ObjectModel).properties["returnMe"]!!
 
         returnedProperty.type.should.equal("string")
-        model.first.properties["ignoreMe"].should.equal(null)
+        (model.first as ObjectModel).properties["ignoreMe"].should.equal(null)
     }
 
     class ModelWithGenericSet<T>(val something: Set<T>)
@@ -152,7 +165,7 @@ class ModelExtractionTest {
     fun `reified generic set types`() {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelWithGenericSet<SubModelElement>>())
-        val property = modelWithDiscovered.first.properties["something"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["something"]!!
 
         property.type.should.equal("array")
         property.items?.`$ref`.should.equal("#/definitions/SubModelElement")
@@ -164,11 +177,24 @@ class ModelExtractionTest {
     }
 
     @Test
+    fun `top level reified generic set types`() {
+        val modelWithDiscovered = createModelData(typeInfo<Set<SubModelElement>>())
+        val model = modelWithDiscovered.first as ArrayModel
+
+        model.items.`$ref`.should.equal("#/definitions/SubModelElement")
+        model.uniqueItems.should.equal(true)
+        assertEqualTypeInfo(
+            typeInfo<SubModelElement>(),
+            modelWithDiscovered.second.first()
+        )
+    }
+
+    @Test
     fun `nested reified generic set types`() {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelWithGenericSet<ModelWithGenericSet<String>>>())
 
-        val property = modelWithDiscovered.first.properties["something"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["something"]!!
 
         property.type.should.equal("array")
         property.items?.`$ref`.should.equal("#/definitions/ModelWithGenericSetOfString")
@@ -186,7 +212,7 @@ class ModelExtractionTest {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelNestedGenericList<SubModelElement>>())
 
-        val property = modelWithDiscovered.first.properties["somethingNested"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["somethingNested"]!!
         property.type.should.equal("array")
         property.items?.type.should.equal("array")
         property.items?.items?.`$ref`.should.equal("#/definitions/SubModelElement")
@@ -214,7 +240,7 @@ class ModelExtractionTest {
         val expectedType = typeInfo<ModelNestedGenericList<ModelNestedGenericList<SubModelElement>>>()
         assertEqualTypeInfo(expectedType, modelWithDiscovered.second.first())
 
-        val property = modelWithDiscovered.first.properties["somethingNested"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["somethingNested"]!!
         property.type.should.equal("array")
         property.items?.type.should.equal("array")
         property.items?.items?.`$ref`.should.equal("#/definitions/ModelNestedGenericListOfModelNestedGenericListOfSubModelElement")
@@ -227,7 +253,7 @@ class ModelExtractionTest {
         val modelWithDiscovered =
             createModelData(typeInfo<ModelNestedList>())
 
-        val property = modelWithDiscovered.first.properties["somethingNested"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["somethingNested"]!!
         property.type.should.equal("array")
         property.items?.type.should.equal("array")
         property.items?.items?.`$ref`.should.equal("#/definitions/SubModelElement")
@@ -274,7 +300,7 @@ class ModelExtractionTest {
 
         val modelWithDiscovered = createModelData(typeInfo)
 
-        val property = modelWithDiscovered.first.properties["value"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["value"]!!
         property.type.should.equal("array")
         property.items?.type.should.equal("string")
 
@@ -291,7 +317,7 @@ class ModelExtractionTest {
             modelWithDiscovered.second.first()
         )
 
-        val property = modelWithDiscovered.first.properties["subModelElement"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["subModelElement"]!!
         property.`$ref`.should.equal("#/definitions/GenericSubModelOfString")
     }
 
@@ -310,7 +336,7 @@ class ModelExtractionTest {
             typeInfo<GenericSubModelTwoGenerics<String, Int>>(),
             modelWithDiscovered.second.first()
         )
-        val property = modelWithDiscovered.first.properties["subModelElement"]!!
+        val property = (modelWithDiscovered.first as ObjectModel).properties["subModelElement"]!!
         property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInt")
     }
 
@@ -353,19 +379,19 @@ class ModelExtractionTest {
         map.find { it.name == "optional" }!!.run {
             this as ParameterV3
             required.should.equal(false)
-            (schema as Property).type.should.equal("string")
+            schema.type.should.equal("string")
         }
 
         map.find { it.name == "mandatory" }!!.run {
             this as ParameterV3
             required.should.equal(true)
-            (schema as Property).type.should.equal("string")
+            schema.type.should.equal("string")
         }
 
         map.find { it.name == "default" }!!.run {
             this as ParameterV3
             required.should.equal(false)
-            (schema as Property).type.should.equal("boolean")
+            schema.type.should.equal("boolean")
             description.should.equal(annotationDescription)
         }
     }

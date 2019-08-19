@@ -31,9 +31,9 @@ import kotlin.reflect.KClassifier
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.full.findAnnotation
 
 /**
  * Gets the [Application.swaggerUi] feature
@@ -217,15 +217,28 @@ internal class SpecVariation(
     }
 
     fun createModelData(typeInfo: TypeInfo): ModelDataWithDiscoveredTypeInfo {
+        return if (typeInfo.type.isSubclassOf(Collection::class)) {
+            val subType = (typeInfo.reifiedType as ParameterizedType).actualTypeArguments.first() as WildcardType
+            val concreteType = subType.upperBounds[0]
+            val subTypeInfo = TypeInfo(concreteType.rawKotlinKClass(), concreteType)
+            val uniqueItems = typeInfo.type.isSubclassOf(Set::class)
+            ArrayModel(subTypeInfo.referenceProperty(), uniqueItems) to listOf(subTypeInfo)
+        } else {
+            val (properties, classesToRegister) = collectModelProperties(typeInfo)
+            ObjectModel(properties) to classesToRegister
+        }
+    }
+
+    private fun collectModelProperties(typeInfo: TypeInfo): Pair<Map<PropertyName, Property>, MutableList<TypeInfo>> {
         val collectedClassesToRegister = mutableListOf<TypeInfo>()
-        val modelProperties =
-            typeInfo.type.memberProperties.mapNotNull {
-                if (it.findAnnotation<Ignore>() != null) return@mapNotNull null
-                val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
-                collectedClassesToRegister.addAll(propertiesWithCollected.second)
-                it.name to propertiesWithCollected.first
-            }.toMap()
-        return ModelData(modelProperties) to collectedClassesToRegister
+        val properties = typeInfo.type.memberProperties.mapNotNull {
+            if (it.findAnnotation<Ignore>() != null) return@mapNotNull null
+            val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
+            collectedClassesToRegister.addAll(propertiesWithCollected.second)
+            it.name to propertiesWithCollected.first
+        }.toMap()
+
+        return properties to collectedClassesToRegister
     }
 
     private fun BodyFromSchema.referenceProperty(): Property =
@@ -251,7 +264,9 @@ fun TypeInfo.responseDescription(): String = modelName()
  */
 typealias ModelDataWithDiscoveredTypeInfo = Pair<ModelData, Collection<TypeInfo>>
 
-class ModelData(val properties: Map<PropertyName, Property>)
+sealed class ModelData
+class ObjectModel(val properties: Map<PropertyName, Property>) : ModelData()
+class ArrayModel(val items: Property, val uniqueItems: Boolean, val type: String = "array") : ModelData()
 
 private val propertyTypes = mapOf(
     Int::class to Property("integer", "int32"),
