@@ -23,6 +23,7 @@ import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
@@ -161,7 +162,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
     abstract fun addDefinition(name: String, schema: Any)
 
     fun addDefinition(typeInfo: TypeInfo) {
-        if (typeInfo.type != Unit::class) {
+        if (typeInfo.type != Unit::class && typeInfo.type.findAnnotation<Ignore>() == null) {
             val accruedNewDefinitions = mutableListOf<TypeInfo>()
             schemaHolder
                 .computeIfAbsent(typeInfo.modelName()) {
