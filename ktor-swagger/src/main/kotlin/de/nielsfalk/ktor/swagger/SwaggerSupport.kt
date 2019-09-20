@@ -213,7 +213,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
                         add(bodyType.bodyParameter())
                     }
                     addAll(locationType.memberProperties.mapNotNull {
-                        if(it?.findAnnotation<Ignore>() != null) {
+                        if (it?.findAnnotation<Ignore>() != null) {
                             return@mapNotNull null
                         }
                         it.toParameter(location.path).let {
