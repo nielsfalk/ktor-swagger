@@ -209,11 +209,13 @@ private abstract class BaseWithVariation<B : CommonBase>(
 
             val parameters = mutableListOf<ParameterBase>().apply {
                 variation {
-                    val reflectionType = (bodyType as? BodyFromReflection)?.typeInfo?.type
-                    if (reflectionType != Unit::class && reflectionType?.findAnnotation<Ignore>() == null) {
+                    if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
                         add(bodyType.bodyParameter())
                     }
-                    addAll(locationType.memberProperties.map {
+                    addAll(locationType.memberProperties.mapNotNull {
+                        if(it?.findAnnotation<Ignore>() != null) {
+                            return@mapNotNull null
+                        }
                         it.toParameter(location.path).let {
                             addDefinitions(it.second)
                             it.first
