@@ -162,7 +162,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
     abstract fun addDefinition(name: String, schema: Any)
 
     fun addDefinition(typeInfo: TypeInfo) {
-        if (typeInfo.type != Unit::class && typeInfo.type.findAnnotation<Ignore>() == null) {
+        if (typeInfo.type != Unit::class) {
             val accruedNewDefinitions = mutableListOf<TypeInfo>()
             schemaHolder
                 .computeIfAbsent(typeInfo.modelName()) {
@@ -209,7 +209,8 @@ private abstract class BaseWithVariation<B : CommonBase>(
 
             val parameters = mutableListOf<ParameterBase>().apply {
                 variation {
-                    if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
+                    val reflectionType = (bodyType as? BodyFromReflection)?.typeInfo?.type
+                    if (reflectionType != Unit::class && reflectionType?.findAnnotation<Ignore>() == null) {
                         add(bodyType.bodyParameter())
                     }
                     addAll(locationType.memberProperties.map {
