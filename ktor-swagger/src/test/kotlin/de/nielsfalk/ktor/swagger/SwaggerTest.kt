@@ -54,7 +54,11 @@ const val toysLocation = "/toys/{id}"
 
 @Group("toy")
 @Location(toysLocation)
-class toy(val id: Int)
+class toy(
+    val id: Int,
+    @Ignore
+    val ignoredProperty: Int
+)
 
 const val toyLocation = "/toys"
 
@@ -203,6 +207,15 @@ class SwaggerTest {
 
         responses?.keys.should.contain("404")
         (responses?.get("200") as ResponseV2).schema?.`$ref`.should.equal("#/definitions/ToyModel")
+    }
+
+    @Test
+    fun `swagger toy model should not include ignored properties`() {
+        val parameters = swagger.paths.get(toysLocation)?.get("put")?.parameters?.map { it.name }
+
+        parameters.should.contain("id")
+        parameters?.contains("id").should.`true`
+        parameters?.contains("ignoredProperty").should.`false`
     }
 
     @Test

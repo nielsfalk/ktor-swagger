@@ -23,6 +23,7 @@ import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
@@ -211,7 +212,10 @@ private abstract class BaseWithVariation<B : CommonBase>(
                     if ((bodyType as? BodyFromReflection)?.typeInfo?.type != Unit::class) {
                         add(bodyType.bodyParameter())
                     }
-                    addAll(locationType.memberProperties.map {
+                    addAll(locationType.memberProperties.mapNotNull {
+                        if (it?.findAnnotation<Ignore>() != null) {
+                            return@mapNotNull null
+                        }
                         it.toParameter(location.path).let {
                             addDefinitions(it.second)
                             it.first
