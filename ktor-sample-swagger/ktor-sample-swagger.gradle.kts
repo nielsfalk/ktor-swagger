@@ -5,7 +5,7 @@ plugins {
 }
 
 fun DependencyHandler.ktor(name: String) =
-    create(group = "io.ktor", name = name, version = "1.1.1")
+    create(group = "io.ktor", name = name, version = "1.2.5")
 
 dependencies {
     implementation(project(":ktor-swagger"))
