@@ -20,11 +20,11 @@ import io.ktor.locations.get
 import io.ktor.locations.patch
 import io.ktor.locations.post
 import io.ktor.locations.put
-import io.ktor.pipeline.ContextDsl
-import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receive
 import io.ktor.routing.Route
 import io.ktor.routing.application
+import io.ktor.util.pipeline.ContextDsl
+import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KClass
 
 data class Metadata(
