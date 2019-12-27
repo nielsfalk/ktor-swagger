@@ -17,10 +17,12 @@ import de.nielsfalk.ktor.swagger.ok
 import de.nielsfalk.ktor.swagger.patch
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
+import de.nielsfalk.ktor.swagger.security
 import de.nielsfalk.ktor.swagger.responds
 import de.nielsfalk.ktor.swagger.version.shared.Contact
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.Information
+import de.nielsfalk.ktor.swagger.version.v2.BasicAuthSecurityDefinition
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import de.nielsfalk.ktor.swagger.version.v3.Schema
@@ -145,6 +147,8 @@ class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int
 internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
     println("Launching on port `$port`")
     val server = embeddedServer(Netty, port) {
+
+
         install(DefaultHeaders)
         install(Compression)
         install(CallLogging)
@@ -170,6 +174,7 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                 definitions["size"] = sizeSchemaMap
                 definitions[petUuid] = petIdSchema
                 definitions["Rectangle"] = rectangleSchemaMap("#/definitions")
+                securityDefinitions.put("basic", BasicAuthSecurityDefinition())
             }
             openApi = OpenApi().apply {
                 info = information
@@ -177,7 +182,9 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                 components.schemas[petUuid] = petIdSchema
                 components.schemas["Rectangle"] = rectangleSchemaMap("#/components/schemas")
             }
+
         }
+
         routing {
             get<pets>("all".responds(ok<PetsModel>(example("model", PetsModel.exampleModel)))) {
                 call.respond(data)
@@ -194,7 +201,7 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                             example("rover", PetModel.exampleRover),
                             example("spike", PetModel.exampleSpike)
                         )
-                    )
+                    ).security(mapOf("basic" to listOf()))
             ) { _, entity ->
                 call.respond(Created, entity.copy(id = newId()).apply {
                     data.pets.add(this)
@@ -279,6 +286,8 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                 respondRequestDetails()
             )
         }
+
+
     }
     return server.start(wait = wait)
 }
