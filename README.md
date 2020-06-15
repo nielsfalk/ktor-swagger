@@ -53,6 +53,8 @@ This project is a proof of concept built on a library to support this functional
 There is an open proposal to include this project as an official Ktor feature
 [here](https://github.com/ktorio/ktor/issues/453).
 
+This project is looking for maintainers. Please open an issue if you're interested in taking over maintaining this project.
+
 ## Other Similar Projects
 
 [Ktor-OpenAPI-Generator](https://github.com/papsign/Ktor-OpenAPI-Generator)
