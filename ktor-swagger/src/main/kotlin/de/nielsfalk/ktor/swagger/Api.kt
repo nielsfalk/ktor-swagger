@@ -11,10 +11,12 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.BadRequest
 import io.ktor.http.HttpStatusCode.Companion.Created
+import io.ktor.http.HttpStatusCode.Companion.Forbidden
 import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import io.ktor.http.HttpStatusCode.Companion.NoContent
 import io.ktor.http.HttpStatusCode.Companion.NotFound
 import io.ktor.http.HttpStatusCode.Companion.OK
+import io.ktor.http.HttpStatusCode.Companion.Unauthorized
 import io.ktor.locations.delete
 import io.ktor.locations.get
 import io.ktor.locations.patch
@@ -241,6 +243,30 @@ fun badRequest(name: String, vararg examples: Pair<String, Example> = arrayOf())
 
 fun badRequest(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
     HttpCodeResponse(BadRequest, listOf(*responses), description)
+
+fun forbidden(): HttpCodeResponse =
+    forbidden(json<Unit>())
+
+inline fun <reified T> forbidden(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    forbidden(json<T>(*examples))
+
+fun forbidden(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    forbidden(json(name, *examples))
+
+fun forbidden(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(Forbidden, listOf(*responses), description)
+
+fun unauthorized(): HttpCodeResponse =
+    unauthorized(json<Unit>())
+
+inline fun <reified T> unauthorized(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    unauthorized(json<T>(*examples))
+
+fun unauthorized(name: String, vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
+    unauthorized(json(name, *examples))
+
+fun unauthorized(vararg responses: ResponseType = arrayOf(), description: String? = null): HttpCodeResponse =
+    HttpCodeResponse(Unauthorized, listOf(*responses), description)
 
 inline fun <reified T> internalServerError(vararg examples: Pair<String, Example> = arrayOf()): HttpCodeResponse =
     internalServerError(json<T>(*examples))
