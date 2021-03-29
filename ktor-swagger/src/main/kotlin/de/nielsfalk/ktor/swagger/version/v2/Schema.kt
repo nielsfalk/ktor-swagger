@@ -32,6 +32,20 @@ class Swagger : CommonBase {
     override var info: Information? = null
     override val paths: Paths = mutableMapOf()
     val definitions: Definitions = mutableMapOf()
+    val securityDefinitions: SecurityDefinitions = mutableMapOf()
+}
+
+abstract class SecurityDefinition(val type: SecurityDefinitionType)
+class BasicAuthSecurityDefinition() : SecurityDefinition(SecurityDefinitionType.basic)
+class ApiKeyAuthSecurityDefinition(val name: String, val `in`: String) : SecurityDefinition(SecurityDefinitionType.apiKey)
+class OAuth2SecurityDefinition(val flow: String, val authorizationUrl: String, val tokenUrl: String, val scopes: Map<String, String>) : SecurityDefinition(SecurityDefinitionType.oauth2)
+
+typealias SecurityDefinitions = MutableMap<String, SecurityDefinition>
+
+enum class SecurityDefinitionType {
+    basic,
+    apiKey,
+    oauth2
 }
 
 class Response(

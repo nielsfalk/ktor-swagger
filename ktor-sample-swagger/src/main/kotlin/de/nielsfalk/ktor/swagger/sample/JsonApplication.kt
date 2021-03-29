@@ -17,16 +17,22 @@ import de.nielsfalk.ktor.swagger.ok
 import de.nielsfalk.ktor.swagger.patch
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
+import de.nielsfalk.ktor.swagger.security
 import de.nielsfalk.ktor.swagger.responds
 import de.nielsfalk.ktor.swagger.version.shared.Contact
 import de.nielsfalk.ktor.swagger.version.shared.Group
 import de.nielsfalk.ktor.swagger.version.shared.Information
+import de.nielsfalk.ktor.swagger.version.v2.BasicAuthSecurityDefinition
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import de.nielsfalk.ktor.swagger.version.v3.Schema
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
+import io.ktor.auth.Authentication
+import io.ktor.auth.UserIdPrincipal
+import io.ktor.auth.authenticate
+import io.ktor.auth.basic
 import io.ktor.features.CallLogging
 import io.ktor.features.Compression
 import io.ktor.features.ContentNegotiation
@@ -145,6 +151,7 @@ class QueryParameter(val optionalParameter: String?, val mandatoryParameter: Int
 internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
     println("Launching on port `$port`")
     val server = embeddedServer(Netty, port) {
+
         install(DefaultHeaders)
         install(Compression)
         install(CallLogging)
@@ -154,6 +161,18 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
             }
         }
         install(Locations)
+        install(Authentication) {
+            basic(name = "exampleAuth") {
+                realm = "Ktor Server"
+                validate { credentials ->
+                    if (credentials.name == credentials.password) {
+                        UserIdPrincipal(credentials.name)
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
         install(SwaggerSupport) {
             forwardRoot = true
             val information = Information(
@@ -170,6 +189,7 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                 definitions["size"] = sizeSchemaMap
                 definitions[petUuid] = petIdSchema
                 definitions["Rectangle"] = rectangleSchemaMap("#/definitions")
+                securityDefinitions.put("exampleAuth", BasicAuthSecurityDefinition())
             }
             openApi = OpenApi().apply {
                 info = information
@@ -178,27 +198,30 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
                 components.schemas["Rectangle"] = rectangleSchemaMap("#/components/schemas")
             }
         }
+
         routing {
             get<pets>("all".responds(ok<PetsModel>(example("model", PetsModel.exampleModel)))) {
                 call.respond(data)
             }
-            post<pets, PetModel>(
-                "create"
-                    .description("Save a pet in our wonderful database!")
-                    .examples(
-                        example("rover", PetModel.exampleRover, summary = "Rover is one possible pet."),
-                        example("spike", PetModel.exampleSpike, summary = "Spike is a different posssible pet.")
-                    )
-                    .responds(
-                        created<PetModel>(
-                            example("rover", PetModel.exampleRover),
-                            example("spike", PetModel.exampleSpike)
+            authenticate("exampleAuth") {
+                post<pets, PetModel>(
+                    "create"
+                        .description("Save a pet in our wonderful database!")
+                        .examples(
+                            example("rover", PetModel.exampleRover, summary = "Rover is one possible pet."),
+                            example("spike", PetModel.exampleSpike, summary = "Spike is a different posssible pet.")
                         )
-                    )
-            ) { _, entity ->
-                call.respond(Created, entity.copy(id = newId()).apply {
-                    data.pets.add(this)
-                })
+                        .responds(
+                            created<PetModel>(
+                                example("rover", PetModel.exampleRover),
+                                example("spike", PetModel.exampleSpike)
+                            )
+                        ).security(mapOf("exampleAuth" to listOf()))
+                ) { _, entity ->
+                    call.respond(Created, entity.copy(id = newId()).apply {
+                        data.pets.add(this)
+                    })
+                }
             }
             get<pet>(
                 "find".responds(
