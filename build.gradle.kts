@@ -14,8 +14,8 @@ buildscript {
 }
 plugins {
     // https://github.com/diffplug/spotless/tree/master/plugin-gradle
-    id("com.diffplug.gradle.spotless") version "3.10.0"
-    id("com.jfrog.bintray") version "1.8.2"
+    id("com.diffplug.spotless") version "5.11.1"
+    id("com.jfrog.bintray") version "1.8.5"
     jacoco
     `maven-publish`
 }
@@ -24,25 +24,24 @@ object Versions {
     /**
      * The version of KtLint to be used for linting the Kotlin and Kotlin Script files.
      */
-    const val KTLINT = "0.23.1"
+    const val KTLINT = "0.41.0"
 }
 
 allprojects {
     apply {
-        plugin("com.diffplug.gradle.spotless")
+        plugin("com.diffplug.spotless")
     }
     group = "de.nielsfalk.ktor"
-    version = "0.7.0"
+    version = "0.8.0"
 
     repositories {
         mavenCentral()
         jcenter()
-        maven { setUrl("https://dl.bintray.com/kotlin/ktor") }
     }
 }
 
 fun DependencyHandler.ktor(name: String) =
-    create(group = "io.ktor", name = name, version = "1.3.2")
+    create(group = "io.ktor", name = name, version = "${property("ktor.version")}")
 
 subprojects {
     apply {
@@ -67,16 +66,6 @@ subprojects {
             ktlint(Versions.KTLINT)
             trimTrailingWhitespace()
             endWithNewline()
-        }
-    }
-
-    tasks.withType<Test> {
-        extensions.configure(typeOf<JacocoTaskExtension>()) {
-            /*
-             * Fix for Jacoco breaking Build Cache support.
-             * https://github.com/gradle/gradle/issues/5269
-             */
-            isAppend = false
         }
     }
 
@@ -180,7 +169,7 @@ task("stage") {
 }
 
 tasks.withType<Wrapper>().configureEach {
-    gradleVersion = "5.1"
+    gradleVersion = "6.8.3"
     distributionType = Wrapper.DistributionType.ALL
 }
 
